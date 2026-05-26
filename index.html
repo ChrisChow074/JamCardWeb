@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JamCard 易經塔羅 - 網頁展示版</title>
+    <style>
+        :root {
+            --primary: #FF6F61;
+            --primary-light: #FFDAD6;
+            --bg: #F2F4F8;
+            --surface: #FFFFFF;
+            --text-main: #2D3436;
+            --text-sub: #888888;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 控制面板區 */
+        .control-panel {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input,
+        select,
+        button {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        #cardInput {
+            width: 260px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: #3BBBB2;
+        }
+
+        /* 牌陣與浮水印總容器 */
+        #screenshotContainer {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding-bottom: 20px;
+        }
+
+        /* 牌陣顯示區 */
+        .capture-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            padding: 32px;
+            min-height: 360px;
+            justify-content: center;
+        }
+
+        .card-wrapper {
+            position: relative;
+            width: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .card-wrapper:hover {
+            transform: scale(1.02);
+        }
+
+        .card-img-box {
+            width: 100%;
+            aspect-ratio: 10.5 / 16;
+            background: #e0e0e0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #BA1A1A;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 10;
+            display: none;
+            padding: 0;
+            line-height: 28px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-wrapper:hover .delete-btn {
+            display: block;
+        }
+
+        .card-title {
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .card-subtitle {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .line-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .line-select {
+            padding: 4px;
+            font-size: 15px;
+            color: inherit;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            border-radius: 6px;
+            cursor: pointer;
+            outline: none;
+            font-weight: bold;
+            margin: 0 6px;
+        }
+
+        .watermark {
+            display: none;
+            text-align: right;
+            padding-right: 40px;
+            font-size: 12px;
+            color: #A6A6A6;
+            font-weight: 500;
+        }
+
+        /* 模態框 (顯示詳情) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 0;
+        }
+
+        .close-modal:hover {
+            background: #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 900;
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .modal-desc {
+            font-weight: bold;
+            color: var(--text-sub);
+            margin-bottom: 16px;
+        }
+
+        .modal-body {
+            white-space: pre-wrap;
+            font-size: 15px;
+        }
+
+        /* ====== 截圖模式 ====== */
+        body.capture-mode {
+            background: #fff;
+            padding: 0;
+        }
+
+        body.capture-mode .control-panel {
+            display: none;
+        }
+
+        body.capture-mode .delete-btn {
+            display: none !important;
+        }
+
+        body.capture-mode #screenshotContainer {
+            box-shadow: none;
+            border-radius: 0;
+        }
+
+        body.capture-mode .watermark {
+            display: block;
+        }
+
+        body.capture-mode .no-line {
+            display: none !important;
+        }
+
+        body.capture-mode .line-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            border: none;
+            background: transparent;
+            pointer-events: none;
+            padding: 0;
+            margin: 0 4px;
+        }
+
+        .capture-exit-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+            background: #2D3436;
+        }
+
+        body.capture-mode .capture-exit-btn {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <!-- 選擇款式 -->
+        <select id="styleSelect" onchange="renderArea()">
+            <option value="style1" selected>Style 1</option>
+            <option value="original">Original</option>
+        </select>
+
+        <input type="text" id="cardInput" list="cardList" placeholder="輸入數字或卦名..." autocomplete="off">
+        <datalist id="cardList"></datalist>
+
+        <button onclick="addCard()">加入</button>
+        <button onclick="drawRandomCard()">抽牌</button>
+        <button class="btn-secondary" onclick="toggleCaptureMode()">截圖模式</button>
+        <button onclick="clearAll()" style="background-color: #666; margin-left: auto;">清空</button>
+    </div>
+
+    <!-- 牌陣與浮水印總容器 -->
+    <div id="screenshotContainer">
+        <div class="capture-area" id="captureArea"></div>
+        <div class="watermark" id="watermark">&copy;jamjamhouse <span id="currentYear"></span></div>
+    </div>
+
+    <!-- 退出截圖模式按鈕 -->
+    <button class="capture-exit-btn" onclick="toggleCaptureMode()">退出</button>
+
+    <!-- 詳情模態框 -->
+    <div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="close-modal" onclick="closeModal(event, true)">×</button>
+            <h2 class="modal-title" id="m-title"></h2>
+            <div class="modal-desc" id="m-desc"></div>
+            <div class="modal-body" id="m-detail"></div>
+            <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
+            <div class="modal-body" id="m-modern"></div>
+        </div>
+    </div>
+
+    <script>
+        // === 你可以在這裡統一設定圖片格式（webp 或 png） ===
+        const ext = "webp";
+
+        const hexagramStructures = {
+            0: "111111", 1: "000000", 2: "010001", 3: "100010", 4: "010111", 5: "111010", 6: "000010", 7: "010000",
+            8: "110111", 9: "111011", 10: "000111", 11: "111000", 12: "111101", 13: "101111", 14: "000100", 15: "001000",
+            16: "011001", 17: "100110", 18: "000011", 19: "110000", 20: "101001", 21: "100101", 22: "100000", 23: "000001",
+            24: "111001", 25: "100111", 26: "100001", 27: "011110", 28: "010010", 29: "101101", 30: "011100", 31: "001110",
+            32: "111100", 33: "001111", 34: "101000", 35: "000101", 36: "110101", 37: "101011", 38: "010100", 39: "001010",
+            40: "100011", 41: "110001", 42: "011111", 43: "111110", 44: "011000", 45: "000110", 46: "011010", 47: "010110",
+            48: "011101", 49: "101110", 50: "001001", 51: "100100", 52: "110100", 53: "001011", 54: "001101", 55: "101100",
+            56: "110110", 57: "011011", 58: "110010", 59: "010011", 60: "110011", 61: "001100", 62: "010101", 63: "101010"
+        };
+        const structureToIdMap = Object.fromEntries(Object.entries(hexagramStructures).map(([k, v]) => [v, parseInt(k)]));
+
+        const cardNames = [
+            "1.乾為天", "2.坤為地", "3.水雷屯", "4.山水蒙", "5.水天需", "6.天水訟", "7.地水師", "8.水地比",
+            "9.風天小畜", "10.天澤履", "11.地天泰", "12.天地否", "13.天火同人", "14.火天大有", "15.地山謙", "16.雷地豫",
+            "17.澤雷隨", "18.山風蠱", "19.地澤臨", "20.風地觀", "21.火雷噬嗑", "22.山火賁", "23.山地剝", "24.地雷復",
+            "25.天雷無妄", "26.山天大畜", "27.山雷頤", "28.澤風大過", "29.坎為水", "30.離為火", "31.澤山咸", "32.雷風恆",
+            "33.天山遯", "34.雷天大壯", "35.火地晉", "36.地火明夷", "37.風火家人", "38.火澤睽", "39.水山蹇", "40.雷水解",
+            "41.山澤損", "42.風雷益", "43.澤天夬", "44.天風姤", "45.澤地萃", "46.地風升", "47.澤水困", "48.水風井",
+            "49.澤火革", "50.火風鼎", "51.震為雷", "52.艮為山", "53.風山漸", "54.雷澤歸妹", "55.雷火豐", "56.火山旅",
+            "57.巽為風", "58.兌為澤", "59.風水渙", "60.水澤節", "61.風澤中孚", "62.雷山小過", "63.水火既濟", "64.火水未濟"
+        ];
+
+        const lineOptions = [
+            { text: "無", value: 0 },
+            { text: "抽", value: -1 },
+            { text: "上", value: 6 },
+            { text: "五", value: 5 },
+            { text: "四", value: 4 },
+            { text: "三", value: 3 },
+            { text: "二", value: 2 },
+            { text: "初", value: 1 }
+        ];
+
+        let drawnCards = [];
+
+        window.onload = () => {
+            document.getElementById('currentYear').innerText = new Date().getFullYear();
+
+            const datalist = document.getElementById('cardList');
+            cardNames.forEach((name) => {
+                const option = document.createElement('option');
+                option.value = name;
+                datalist.appendChild(option);
+            });
+
+            document.getElementById('cardInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') addCard();
+            });
+        };
+
+        document.addEventListener('keydown', function (event) {
+            // 如果按下的是 Esc 鍵 (Escape)
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('detailModal');
+                // 檢查如果視窗目前是開啟的狀態，就關閉它
+                if (modal.style.display === 'flex') {
+                    closeModal(event, true);
+                }
+            }
+        });
+
+        function getTransformedId(originalId, movingLine) {
+            if (movingLine === 0) return null;
+            let structure = hexagramStructures[originalId];
+            let lineIndex = 6 - movingLine;
+            let newChar = structure[lineIndex] === '1' ? '0' : '1';
+            let newStructure = structure.substring(0, lineIndex) + newChar + structure.substring(lineIndex + 1);
+            return structureToIdMap[newStructure];
+        }
+
+        function addCard() {
+            const inputVal = document.getElementById('cardInput').value.trim();
+            if (!inputVal) return;
+
+            let cardId = cardNames.findIndex(name =>
+                name === inputVal ||
+                name.startsWith(inputVal + ".") ||
+                name.includes(inputVal)
+            );
+
+            if (cardId === -1) {
+                alert("找不到對應的卦象，請輸入正確的數字或卦名！");
+                return;
+            }
+
+            drawnCards.push({
+                id: cardId,
+                movingLine: 0,
+                type: 'main',
+                transId: null
+            });
+
+            document.getElementById('cardInput').value = "";
+            renderArea();
+        }
+
+        function drawRandomCard() {
+            const takenIds = drawnCards
+                .filter(item => item.type === 'main')
+                .map(item => item.id);
+            const availableIds = cardNames
+                .map((_, index) => index)
+                .filter(index => !takenIds.includes(index));
+
+            if (availableIds.length === 0) {
+                alert("已抽完所有不重複的卦象。請先清空牌陣再繼續抽牌。");
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * availableIds.length);
+            const randomId = availableIds[randomIndex];
+
+            drawnCards.push({
+                id: randomId,
+                movingLine: 0,
+                type: 'main',
+                transId: null
+            });
+            renderArea();
+        }
+
+        function changeMovingLine(event, index, newLine) {
+            if (newLine === -1) {
+                newLine = Math.floor(Math.random() * 6) + 1;
+                if (event && event.target) {
+                    event.target.value = newLine;
+                }
+            }
+
+            let card = drawnCards[index];
+            card.movingLine = newLine;
+            card.transId = getTransformedId(card.id, newLine);
+
+            let hasTransCardNext = (index + 1 < drawnCards.length) && drawnCards[index + 1].type === 'transformed';
+
+            if (newLine === 0) {
+                if (hasTransCardNext) {
+                    drawnCards.splice(index + 1, 1);
+                }
+            } else {
+                if (hasTransCardNext) {
+                    drawnCards[index + 1].id = card.transId;
+                } else {
+                    drawnCards.splice(index + 1, 0, {
+                        id: card.transId,
+                        type: 'transformed',
+                        movingLine: 0,
+                        transId: null
+                    });
+                }
+            }
+            renderArea();
+        }
+
+        function removeCard(event, index) {
+            event.stopPropagation();
+            let card = drawnCards[index];
+
+            if (card.type === 'main') {
+                if (card.movingLine > 0 && index + 1 < drawnCards.length && drawnCards[index + 1].type === 'transformed') {
+                    drawnCards.splice(index, 2);
+                } else {
+                    drawnCards.splice(index, 1);
+                }
+            } else {
+                if (index > 0 && drawnCards[index - 1].type === 'main') {
+                    drawnCards[index - 1].movingLine = 0;
+                    drawnCards[index - 1].transId = null;
+                }
+                drawnCards.splice(index, 1);
+            }
+            renderArea();
+        }
+
+        function clearAll() {
+            drawnCards = [];
+            renderArea();
+        }
+
+        function renderArea() {
+            const area = document.getElementById('captureArea');
+            area.innerHTML = '';
+
+            // 取得目前的款式設定
+            const currentStyle = document.getElementById('styleSelect').value;
+
+            drawnCards.forEach((item, index) => {
+                const cardNameFull = cardNames[item.id];
+                const cardNameShort = cardNameFull.split('.')[1];
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'card-wrapper';
+                wrapper.onclick = () => showDetail(item.id);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-btn';
+                delBtn.innerHTML = '×';
+                delBtn.onclick = (e) => removeCard(e, index);
+
+                const imgBox = document.createElement('div');
+                imgBox.className = 'card-img-box';
+                const img = document.createElement('img');
+
+                // 根據款式與設定的副檔名載入圖片
+                if (currentStyle === 'original') {
+                    img.src = `images/card${item.id + 1}.${ext}`; // card1.webp
+                } else {
+                    img.src = `images/card_${item.id + 1}_style1.${ext}`; // card_1_style1.webp
+                }
+
+                img.alt = cardNameShort;
+                img.onerror = function () {
+                    this.style.display = 'none';
+                    imgBox.innerHTML = `<div style="color:#999; font-weight:bold;">${cardNameShort}</div>`;
+                };
+                imgBox.appendChild(img);
+
+                const title = document.createElement('div');
+                title.className = 'card-title';
+                title.innerText = cardNameFull;
+
+                wrapper.appendChild(delBtn);
+                wrapper.appendChild(imgBox);
+                wrapper.appendChild(title);
+
+                const subtitle = document.createElement('div');
+                subtitle.className = 'card-subtitle';
+
+                if (item.type === 'transformed') {
+                    subtitle.innerText = `(變卦)`;
+                    subtitle.style.color = "var(--text-sub)";
+                    subtitle.style.fontSize = "15px";
+                    subtitle.style.fontWeight = "500";
+                    wrapper.appendChild(subtitle);
+                } else {
+                    const lineBox = document.createElement('div');
+                    lineBox.className = 'line-box';
+
+                    if (item.movingLine === 0) {
+                        lineBox.classList.add('no-line');
+                    }
+
+                    const prefix = document.createElement('span');
+                    prefix.innerText = "動爻: ";
+                    lineBox.appendChild(prefix);
+
+                    const select = document.createElement('select');
+                    select.className = 'line-select';
+                    select.onclick = (e) => e.stopPropagation();
+                    select.onchange = (e) => changeMovingLine(e, index, parseInt(e.target.value));
+
+                    lineOptions.forEach(optData => {
+                        const opt = document.createElement('option');
+                        opt.value = optData.value;
+                        opt.text = optData.text;
+                        if (optData.value === item.movingLine) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+
+                    lineBox.appendChild(select);
+
+                    if (item.movingLine > 0 && item.transId !== null) {
+                        const transNameShort = cardNames[item.transId].split('.')[1];
+                        const transIndicator = document.createElement('span');
+                        transIndicator.className = 'trans-indicator';
+                        transIndicator.innerText = ` -> ${transNameShort}`;
+                        lineBox.appendChild(transIndicator);
+                    }
+
+                    subtitle.appendChild(lineBox);
+                    wrapper.appendChild(subtitle);
+                }
+
+                area.appendChild(wrapper);
+            });
+        }
+
+        function showDetail(id) {
+            const mockData = getMockData(id);
+            document.getElementById('m-title').innerText = cardNames[id];
+            document.getElementById('m-desc').innerText = mockData.desc;
+            document.getElementById('m-detail').innerHTML = formatMarkdown(mockData.detail);
+            document.getElementById('m-modern').innerHTML = formatMarkdown(mockData.modern);
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        function closeModal(e, force = false) {
+            if (force || e.target.id === 'detailModal') {
+                document.getElementById('detailModal').style.display = 'none';
+            }
+        }
+
+        function toggleCaptureMode() {
+            document.body.classList.toggle('capture-mode');
+        }
+
+        function formatMarkdown(text) {
+            if (!text) return "";
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--primary);">$1</strong>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function getMockData(id) {
+            const db = {
+                0: {
+                    desc: "凜凜皇者之象，自強不息之意。",
+                    detail: "**十二消息卦：巳月**\n\n" +
+                        "**天行剛健，自強不息。**\n天道運行周而復始，永無止息，誰也不能阻擋，君子應效法天道，自立自强，不停地奮鬥下去。\n\n" +
+                        "**乾：元亨。利貞。**\n\n" +
+                        "**上九**：亢龍，有悔。\n" +
+                        "**九五**：飛龍在天，利見大人。\n" +
+                        "**九四**：或躍在淵，无咎。\n" +
+                        "**九三**：君子終日乾乾，夕惕若；厲，无咎。\n" +
+                        "**九二**：見龍在田，利見大人。\n" +
+                        "**初九**：潛龍勿用。\n" +
+                        "**用九**：見羣龍无首，吉。",
+                    modern: "**上九**：**忌狂妄自大** 達到頂峰後最忌狂妄、不知止步，應懂得功成身退，避免物極必反的災難。\n" +
+                        "**九五**：**巔峰影響力** 發揮影響力成就大事，同時要任用賢才來維持盛世。\n" +
+                        "**九四**：**進退的抉擇** 觀察局勢決定要大膽突破還是退守待機，靈活應變是關鍵。\n" +
+                        "**九三**：**終日乾乾** 身處小有成就、責任重大的階段，必須保持高度警覺與勤奮，避免因小有成就而懈怠招禍。\n" +
+                        "**九二**：**初露鋒芒** 實力已初步獲得認可，應積極建立人脈，尋找志同道合的導師，爭取更大的舞台。\n" +
+                        "**初九**：**沉潛積累** 在實力不足或環境不許可時，應默默修煉、累積能量，切忌急於表現。\n" +
+                        "**用九**：**群龍無首** 群龍展現剛強之氣，卻互不爭首、不爭功，能屈能伸且各司其職。這是大吉大利的象徵。"
+                },
+                1: {
+                    desc: "相容萬物之象，以柔制剛之意。",
+                    detail: "**十二消息卦：亥月**\n\n" +
+                        "**大地承載萬物，以德服眾，仁者無敵。**\n象徵柔順與包容，大地包容萬物。\n諸事不宜急進，以靜制動為宜。\n\n" +
+                        "**坤：元亨。利牝馬之貞。**\n" +
+                        "君子有攸往，先迷後得，主利。\n" +
+                        "西南得朋，東北喪朋。安貞，吉。\n\n" +
+                        "**上六**：龍戰于野，其血玄黃。\n" +
+                        "**六五**：黃裳，元吉。\n" +
+                        "**六四**：括囊，无咎无譽。\n" +
+                        "**六三**：含章，可貞。或從王事，无成有終。\n" +
+                        "**六二**：直方大，不習无不利。\n" +
+                        "**初六**：履霜，堅冰至。\n" +
+                        "**用六**：利永貞。",
+                    modern: "**上六**：**龍戰於野** 當陰柔、輔佐的一方過度膨脹，甚至想挑戰、取代主位（陽剛）時，必然引發兩敗俱傷的慘烈衝突。\n" +
+                        "**六五**：**高位的謙遜** 即使身居高位也保持柔和、守本分，不刻意顯擺權威（如穿著內斂的黃裳）。這種不露鋒芒的姿態，最能獲得長久的吉祥。\n" +
+                        "**六四**：**謹言慎行** 在局勢動盪或多疑的環境中，少言寡語、謹慎處世是避開是非的最佳策略。\n" +
+                        "**六三**：**含章可貞** 處於從屬地位時應隱藏光芒，功勞歸於上司，這種謙遜能保護自己並獲得善果。\n" +
+                        "**六二**：**直方大** 修養內在的純真與正直（直）、外在的規矩與厚道（方）。當你本身格調足夠寬廣時，不需刻意經營，任何環境都能適應。\n" +
+                        "**初六**：**防微杜漸** 凡事皆有徵兆，踩到薄霜時，就應預見嚴冬堅冰的到來。在問題剛露頭時就具備敏銳洞察力，才能及時應變。\n" +
+                        "**用六**：**陰陽轉化** 陰柔到了極致而生陽，能夠長久穩定即是吉。"
+                },
+                2: {
+                    desc: "春木更生之象，艱難險阻之意。",
+                    detail: "**四大難卦**\n屯者難也，萬事欲進而不得進。\n身處困難，步步為營，有初難後解之意。\n\n" +
+                        "**屯：元亨，利貞。勿用有攸往，利建侯。**\n\n" +
+                        "**上六**：乘馬班如，泣血漣如。\n" +
+                        "**九五**：屯其膏；小貞吉，大貞凶。\n" +
+                        "**六四**：乘馬班如，求婚媾，往，吉无不利。\n" +
+                        "**六三**：即鹿无虞，惟入于林中，君子幾不如舍，往吝。\n" +
+                        "**六二**：屯如邅如，乘馬班如，匪寇婚媾，女子貞不字，十年乃字。\n" +
+                        "**初九**：磐桓，利居貞，利建侯。",
+                    modern: "**上六**：**窮途末路** 到了窮途末路仍不知變通、不肯求助，只會陷入極度的絕望與困境中。\n" +
+                        "**九五**：**緩進守成** 處於領導位卻受困於環境，此時宜守不宜攻，先從小範圍的改善做起，不可大動干戈。\n" +
+                        "**六四**：**借力使力** 個人力量不足時，放下身段去求助有能力的貴人，是突破僵局的最佳路徑。\n" +
+                        "**六三**：**及時止損** 缺乏專業指導或條件不成熟時，不要盲目擴張，懂得在停下腳步（止損）才是真正的智慧。\n" +
+                        "**六二**：**寧缺勿濫** 遇到不合適的機會應果斷拒絕，守住初衷，等待真正成熟的時機（即便很久）才會成功。\n" +
+                        "**初九**：**穩紮穩打** 在起步艱難時刻，別急著衝刺，先穩定軍心、明確目標並找好合作夥伴。"
+                },
+                3: {
+                    desc: "春童啟智之象，迷模摸索之意。",
+                    detail: "蒙者，昏而無所見也，故宜啟蒙。\n初時迷惑不知方向，須忍耐待機而進，凡事多聽取別人意見，則運可通也。\n\n" +
+                        "**蒙：亨。匪我求童蒙，童蒙求我。初筮告，再三瀆，瀆則不告。利貞。**\n\n" +
+                        "**上九**：擊蒙，不利為寇，利禦寇。\n" +
+                        "**六五**：童蒙，吉。\n" +
+                        "**六四**：困蒙，吝。\n" +
+                        "**六三**：勿用取女，見金夫，不有躬，无攸利。\n" +
+                        "**九二**：包蒙吉，納婦吉，子克家。\n" +
+                        "**初六**：發蒙，利用刑人，用說桎梏，以往吝。",
+                    modern: "**上九**：**擊蒙之道** 教育或糾正錯誤時應掌握分寸，目的是為了防範偏差（禦寇），而非造成對抗與傷害。\n" +
+                        "**六五**：**童蒙之吉** 保持「虛懷若谷」的學習態度，像孩子般的純真與謙卑，放下身段向人請教，是開啟智慧的最快途徑。\n" +
+                        "**六四**：**固步自封** 陷入主觀成見或拒絕向外求教，會讓自己困在無知中，無法取得進步。\n" +
+                        "**六三**：**忌見異思遷** 學習或行事最忌心志不堅、隨波逐流，若被眼前的名利誘惑會喪失自我，難有所成。\n" +
+                        "**九二**：**包蒙大器** 作為引導者應有廣大器量，接納不成熟的意見，以耐心和包容來培育人才。\n" +
+                        "**初六**：**發蒙利用刑** 學習初期最重要的是建立紀律與正確習慣，雖然初期需要一些強制性的約束（紀律），但這是為了防止日後犯下難以挽回的大錯。"
+                },
+                4: {
+                    desc: "密雲不雨之象，待機而動之意。",
+                    detail: "雲登天上而未雨，不能急進，等待時機之象。期待，雲於天上而未雨，不能躁進，應等待時機。\n\n" +
+                        "**需：有孚，光亨。貞吉，利涉大川。**\n\n" +
+                        "**上六**：入于穴，有不速之客三人來，敬之終吉。\n" +
+                        "**九五**：需于酒食，貞吉。\n" +
+                        "**六四**：需于血，出自穴。\n" +
+                        "**九三**：需于泥，致寇至。\n" +
+                        "**九二**：需于沙，小有言，終吉。\n" +
+                        "**初九**：需于郊，利用恆，无咎。\n",
+                    modern: "**上六**：**接納轉機** 等待到了最後關頭，可能會出現看似突兀的變數或不速之客，此時不可排斥，誠懇接納是扭轉乾坤的關鍵。\n" +
+                        "**九五**：**蓄勢待發** 當萬事具備只欠東風時，不需要焦慮，應放鬆心情、享受生活，以飽滿的精神迎接轉機。\n" +
+                        "**六四**：**冷靜脫險** 陷入極度困境時，不可盲目硬拼，應保持冷靜與耐性，尋找脫離險境的出口。\n" +
+                        "**九三**：**戒急躁入險** 如果選擇等待的位置不當（離危險太近），或因為過於急躁而過早行動，會讓自己暴露在危險中。\n" +
+                        "**九二**：**內心平靜** 當壓力逼近、外界出現質疑聲音時，只要內心平靜、不予理會，就能化險為夷。\n" +
+                        "**初九**：**安於本分** 危機尚遠或時機尚早時，最忌自亂陣腳，安於本分地耐心等候即可。"
+                },
+                5: {
+                    desc: "背道而馳之象，無端訟起之意。",
+                    detail: "乾天昇於上，坎水降於下，相背而行而訟起。事與願違，凡事不順，小人加害，宜防陷阱。\n\n" +
+                        "**訟：有孚，窒，惕，中吉，終凶。利見大人，不利涉大川。**\n\n" +
+                        "**上九**：或錫之鞶帶，終朝三褫之。\n" +
+                        "**九五**：訟，元吉。\n" +
+                        "**九四**：不克訟，復即命渝，安貞吉。\n" +
+                        "**六三**：食舊德，貞厲，終吉。或從王事，无成。\n" +
+                        "**九二**：不克訟，歸而逋，其邑人三百戶无眚。\n" +
+                        "**初六**：不永所事，小有言，終吉。",
+                    modern: "**上九**：**爭勝之禍** 靠鬥爭贏得的戰利品並不穩固，反會招致怨恨與永無止盡的報復。\n" +
+                        "**九五**：**大中至正** 身處裁判或高位，處事公正嚴明。唯有建立在正義基礎上的裁決，讓雙方心服口服，才能從根本上解決問題。\n" +
+                        "**九四**：**反省轉向** 發現自己理虧或勝算不高時，應反省自覺，主動化解對立、回歸正軌。\n" +
+                        "**六三**：**守舊安分** 紛亂中應守住本分，不貪求非分之財或功名，安守現狀能讓你免於紛爭。\n" +
+                        "**九二**：**智者避險** 當實力懸殊，認輸退避並不丟臉，保全實力比硬碰硬更有智慧。\n" +
+                        "**初六**：**及早抽身** 糾紛初時及早抽身，不為意氣之爭而擴大事端，是最高明的處世之道。"
+                },
+                6: {
+                    desc: "地勢臨淵之象，以寡服眾之意。",
+                    detail: "養兵聚眾，出師攻伐之象，彼此有傷，難得安寧。困難重重，凡事以正規行事忌獨斷獨行，投機取巧，提防潛在敵人。\n\n" +
+                        "**師：貞丈人吉，无咎。**\n\n" +
+                        "**上六**：大君有命，開國承家，小人勿用。\n" +
+                        "**六五**：田有禽，利執言，无咎。長子帥師，弟子輿尸，貞凶。\n" +
+                        "**六四**：師左次，无咎。\n" +
+                        "**六三**：師或輿尸，凶。\n" +
+                        "**九二**：在師中吉，无咎；王三錫命。\n" +
+                        "**初六**：師出以律，否臧，凶。",
+                    modern: "**上六**：**慎於賞賜** 慶功與分配利益時，要區分才華與品德；才華高但品德差的小人，只能賞金錢，不可給權力核心，以免日後亂政。\n" +
+                        "**六五**：**名正言順** 行事必須有正當性，且選才要極其慎重；重用德不配位的人會毀掉整個大局。\n" +
+                        "**六四**：**明智退守** 當局勢不利時，懂得撤退保全實力並非恥辱，而是明智的戰略選擇。\n" +
+                        "**六三**：**統一指揮** 團隊最忌諱指揮權混亂。若人人想當家、各有各的意見，會導致執行力崩潰，必然招致失敗。\n" +
+                        "**九二**：**深耕基層** 領導者應深入基層、掌握全軍，獲得最高決策者的完全信任與充分授權，是任務成功的核心。。\n" +
+                        "**初六**：**嚴明紀律** 執行計畫必須明確制訂「制度與規矩」；沒有紀律的團隊實力再強也必敗。"
+                },
+                7: {
+                    desc: "眾星拱月之象，安逸進取之意。",
+                    detail: "一陽統五陰，比鄰相親之輔，和樂之象。\n有貴人提拔，宜廣結人緣，積極進取。\n\n" +
+                        "**比：吉。原筮元永貞，无咎。不寧方來，後夫凶。**\n\n" +
+                        "**上六**：比之无首，凶。\n" +
+                        "**九五**：顯比。王用三驅，失前禽，邑人不誡，吉。\n" +
+                        "**六四**：外比之，貞吉。\n" +
+                        "**六三**：比之匪人。\n" +
+                        "**六二**：比之自內，貞吉。\n" +
+                        "**初六**：有孚，比之，无咎。有孚盈缶，終來有它，吉。",
+                    modern: "**上六**：**烏合之眾** 團隊缺乏明確的核心或共同目標，只會變成烏合之眾，最終將走向失敗。\n" +
+                        "**九五**：**大器包容** 來者不拒，去者不追。真正的領導力是提供平台而非強行掌控。這種「捨魚而取獸」的豁達，反而能贏得他人內心真正的擁護。\n" +
+                        "**六四**：**賢能結盟** 主動與比自己更優秀的領導者或強大的團隊結盟。能為自己帶來更好的發展空間。\n" +
+                        "**六三**：**近墨者黑** 選擇圈子與夥伴要極其慎重，跟錯了人、站錯了隊，會讓自己陷入泥淖。\n" +
+                        "**六二**：**志同道合** 穩固的合作應源於內在的價值認同與情感共鳴，而非短暫的外在利益交換。這種發自內心的親近才經得起考驗。\n" +
+                        "**初六**：**真誠開路** 建立社交關係的首要條件是「真誠」，只要心意誠懇自然會吸引貴人與好運。"
+                },
+                8: {
+                    desc: "密雲無雨之象，藩養實力之意。",
+                    detail: "風運行於天，健而且入，但畜積之量有限。\n畜積之量有限，力不從心，故忍耐蓄養實力，靜待時機。\n\n" +
+                        "**小畜：亨。密雲不雨，自我西郊。**\n\n" +
+                        "**上九**：既雨既處，尚德載，婦貞厲，月幾望，君子征凶。\n" +
+                        "**九五**：有孚攣如，富以其鄰。\n" +
+                        "**六四**：有孚，血去惕出，无咎。\n" +
+                        "**九三**：輿說輻，夫妻反目。\n" +
+                        "**九二**：牽復，吉。\n" +
+                        "**初九**：復自道，何其咎，吉。",
+                    modern: "**上九**：**適可而止** 累積達到一定程度、小有成就時應懂得適可而止，不可過度擴張，否則物極必反。\n" +
+                        "**九五**：**誠信分享** 真正的影響力來自於誠信。能將資源與眾人分享、帶領大家共同獲利的人，其領導地位才是最穩固的。\n" +
+                        "**六四**：**以誠避禍** 處於強勢力量的夾縫中，弱者應以真誠化解敵意，不爭一時之氣，才能在危機中自保。\n" +
+                        "**九三**：**冷靜止損** 停滯不前時，內部最容易發生內耗與爭吵，應冷靜修補核心問題，而非互相埋怨。\n" +
+                        "**九二**：**志同道合** 發現環境不對時，與志同道合的朋友互相扶持、共同退守，是明智的選擇。\n" +
+                        "**初九**：**回歸初心** 前路受阻時，不要盲目硬衝，回歸初心、守住本分才是最保險的做法。"
+                },
+                9: {
+                    desc: "如履虎尾之象，險中求勝之意。",
+                    detail: "柔弱遇剛強，欲行卻難行之象，難且危也。\n百事不宜急進，須小心行事，有驚無險。\n\n" +
+                        "**履：虎尾，不咥人，亨。**\n\n" +
+                        "**上九**：視履考祥，其旋元吉。\n" +
+                        "**九五**：夬履，貞厲。\n" +
+                        "**九四**：履虎尾，愬愬終吉。\n" +
+                        "**六三**：眇能視，跛能履，履虎尾，咥人，凶。武人為于大君。\n" +
+                        "**九二**：履道坦坦，幽人貞吉。\n" +
+                        "**初九**：素履，往无咎。",
+                    modern: "**上九**：**圓滿總結** 成功後能回頭反思過程、總結經驗，若能貫徹始終，這才是真正的圓滿。\n" +
+                        "**九五**：**戒除武斷** 若處事過於武斷、自負，容易因獨斷獨行而引發不可收拾的危機。\n" +
+                        "**九四**：**高度警覺** 身處險境或面對嚴厲環境中，只要時刻保持高度警覺、謹言慎行，反而能化險為夷。\n" +
+                        "**六三**：**量力而為** 認不清自身實力而逞強好鬥，就像在老虎身後挑釁，不僅無法達成目標，更會招致必然的失敗。\n" +
+                        "**九二**：**守志淡泊** 面對外界誘惑，若能不急不徐、保持內心的平靜與節操，路會愈走愈順。\n" +
+                        "**初九**：**腳踏實地** 不慕虛榮、腳踏實地。當你的動機單純時，就不會陷入複雜的人事鬥爭中。"
+                },
+                10: {
+                    desc: "事事通泰之象，上下和睦之象。",
+                    detail: "**十二消息卦：寅月**\n\n" +
+                        "天地陰陽之氣相交感，上下和睦，流通無阻。諸事吉祥順利，凡事宜內求，不宜外求，防樂極生悲。\n\n" +
+                        "**泰：小往大來，吉亨。**\n\n" +
+                        "**上六**：城復于隍，勿用師，自邑告命，貞吝。\n" +
+                        "**六五**：帝乙歸妹，以祉，元吉。\n" +
+                        "**六四**：翩翩，不富以其鄰；不戒以孚。\n" +
+                        "**九三**：无平不陂，无往不復，艱貞无咎。勿恤其孚，于食有福。\n" +
+                        "**九二**：包荒。用馮河，不遐遺；朋亡。得尚于中行。\n" +
+                        "**初九**：拔茅茹以其彙，征吉。",
+                    modern: "**上六**：**城復于隍** 發覺好運已到盡頭大勢即將反轉時，不可強求，應果斷收縮防線、反省自救，尋求自救之道。\n" +
+                        "**六五**：**虛懷雙贏** 擁有優勢的一方若能放下架子主動示好，能創造出極大的和諧與雙贏局面。\n" +
+                        "**六四**：**誠信感召** 真正的影響力來自於誠信，與他人達成共識與合作不需要靠物質誘騙。\n" +
+                        "**九三**：**居安思危** 永遠的平坦，好運中必藏危機。保持憂患意識才能在變局中守住福氣。\n" +
+                        "**九二**：**大器包容** 身處盛世或高位，要大器包容異己，勇於承擔重任，並保持公正不阿的胸懷。\n" +
+                        "**初九**：**提攜同進** 成功不能靠單打獨鬥，局勢大好時，應主動提攜優秀的同伴共同發展，集體的力量才最穩固。"
+                },
+                11: {
+                    desc: "閉塞不通之象。",
+                    detail: "**十二消息卦：申月**\n\n" +
+                        "天氣上升，地氣下降，天地之氣不交，主閉塞不通。上下不和，百事不通，凡事宜忍，須知否極泰來。\n\n" +
+                        "**否：否之匪人，不利君子貞，大往小來。**\n\n" +
+                        "**上九**，傾否，先否後喜。\n" +
+                        "**九五**，休否，大人吉。其亡其亡，繫于苞桑。\n" +
+                        "**九四**，有命，无咎，疇離祉。\n" +
+                        "**六三**，包羞。\n" +
+                        "**六二**，包承，小人吉，大人否。亨。\n" +
+                        "**初六**，拔茅茹以其彙，貞吉。亨。",
+                    modern: "**上九**：**物極必反** 黑暗到了盡頭就是黎明。堅持到最後的人，終能看到困局瓦解。\n" +
+                        "**九五**：**休否之戒** 出現轉機時更要戒慎恐懼，時刻抱持危機意識，才能真正扭轉局面。\n" +
+                        "**九四**：**順時而動** 出現轉機時，若能順應正確的時機行事，原本的阻塞將會開始鬆動。\n" +
+                        "**六三**：**包羞受挫** 小人得志不會長久，當惡行暴露或內心不安時，終究要面對自責與外界的唾棄。\n" +
+                        "**六二**：**守正不阿** 面對混亂的環境與不正之風，拒絕隨波逐流，守住清高原則雖然暫時吃虧，但能保全人格與長遠的價值。\n" +
+                        "**初六**：**拔茅連茹** 環境惡劣時，應與理念相同的夥伴結盟退隱，共同守住底線，不向現實低頭。"
+                },
+                12: {
+                    desc: "二人同心之象，合作共事之意。",
+                    detail: "二人同心，其利斷金，君子正心誠意，與人和同之象。與人共事，上下皆和睦，又得長輩提拔。\n\n" +
+                        "**同人：同人于野，亨。 利涉大川，利君子貞。**\n\n" +
+                        "**上九**：同人于郊，無悔。\n" +
+                        "**九五**：同人，先號啕而后笑。大師克相遇。\n" +
+                        "**九四**：乘其墉，弗克，攻吉。\n" +
+                        "**九三**：伏戎于莽，升其高陵，三歲不興。\n" +
+                        "**六二**：同人于宗，吝。\n" +
+                        "**初九**：同人于門，無咎。",
+                    modern: "**上九**：**和而不同** 保持淡然態度，雖然不一定能深交，但維持和諧也能平安無事。\n" +
+                        "**九五**：**患難真情** 真正合作往往要經歷磨合與考驗，只要信念一致，克服萬難後才最牢固。\n" +
+                        "**九四**：**主動言和** 競爭中若能及時發現自己理虧或硬拼無益，主動放下成見尋求握手言和，是展現智慧與格局的時刻。\n" +
+                        "**九三**：**戒猜忌內耗** 對合作夥伴心存戒心、互相算計，導致彼此防範而無法前進，最終只會空耗時光。\n" +
+                        "**六二**：**打破門第** 合作若只看親疏遠近，會限制了發展，這種狹隘的合作方式難以成就大事業。\n" +
+                        "**初九**：**大公無私** 建立合作關係應保持透明開放，大公無私，這樣才不會招致他人猜疑。"
+                },
+                13: {
+                    desc: "日麗中天之象，辛勤豐收之意。",
+                    detail: "太陽在天，遍照大地萬物，但五陽爭一陰，須知有盈即缺。\n得時得運，昌榮大吉，但防物極必反。\n\n" +
+                        "**大有：元亨。**\n\n" +
+                        "**上九**：自天佑之，吉无不利。\n" +
+                        "**六五**：厥孚交如，威如；吉。\n" +
+                        "**九四**：匪其彭，无咎。\n" +
+                        "**九三**：公用亨于天子，小人弗克。\n" +
+                        "**九二**：大車以載，有攸往，无咎。\n" +
+                        "**初九**：无交害，匪咎，艱則无咎。",
+                    modern: "**上九**：**自天佑之** 當人的作為符合天理、造福大眾時，自然會順風順水，達到圓滿的境界。\n" +
+                        "**六五**：**誠信感召** 真正的領導力來自於人格魅力與信用，而非靠金錢或武力，而是憑藉真誠的信用來贏得人心。\n" +
+                        "**九四**：**收斂光芒** 處於高位時最忌趾高氣揚，懂得收斂光芒才能避開他人的嫉妒與攻擊。\n" +
+                        "**九三**：**格局與施予** 擁有財富後應回饋社會，缺乏格局的小人只會因財失義。\n" +
+                        "**九二**：**大器承載** 具備雄厚的實力與承載力，只要目標正當且有能力管理財富，就能大展宏圖。\n" +
+                        "**初九**：**創業維艱** 成功要遠離誘惑與壞習慣，時刻提醒自己守成不易，保持清醒的危機感。"
+                },
+                14: {
+                    desc: "空谷藏玉之象，虛懷處世之意。",
+                    detail: "山應在地面上，而今在地下，代表謙遜之德。吉利平安，前途無限，但必須除驕橫之氣。\n\n" +
+                        "**謙：亨，君子有終。**\n\n" +
+                        "**上六**：鳴謙，利用行師，征邑國。\n" +
+                        "**六五**：不富，以其鄰，利用侵伐，无不利。\n" +
+                        "**六四**：无不利，撝謙。\n" +
+                        "**九三**：勞謙君子，有終吉。\n" +
+                        "**六二**：鳴謙，貞吉。\n" +
+                        "**初六**：謙謙君子，用涉大川，吉。",
+                    modern: "**上六**：**反求諸己** 當你的修養獲得大眾肯定時，不應以此去要求別人，而應趁機整頓內部問題或修正自己的小缺點。\n" +
+                        "**六五**：**謙而有力** 謙虛並非軟弱，當遇到無理取鬧或破壞秩序者，謙者亦有雷霆手段來維護正義。\n" +
+                        "**六四**：**功成不居** 懂得發揮「協調者」的角色，將成就與榮耀推功於上下夥伴，不爭名奪利，未來的道路反而會更加寬廣。\n" +
+                        "**九三**：**勞謙君子** 全卦唯一的陽爻，在立下汗馬功勞後，更要懂得克制與退讓。這種「有功而不自矜」的修養，最能贏得人心。\n" +
+                        "**六二**：**誠於中形於外** 發自內心的真誠與謙遜，不僅能自我修身，更能贏得誠摯的口碑與眾人的自發支持。\n" +
+                        "**初六**：**低調開局** 在事情起步時保持最低的姿態。低調的作風能化解初期的種種阻力，讓行動在安全中穩步推進。"
+                },
+                15: {
+                    desc: "雷奮大地之象，事見生機之意。",
+                    detail: "雷出於地上，陽氣奮發，萬物欣欣向榮。\n如意安泰，可得長輩扶助，凡事應有備而戰。\n\n" +
+                        "**豫：利建侯行師。**\n\n" +
+                        "**上六**：冥豫，成有渝，无咎。\n" +
+                        "**六五**：貞疾，恆不死。\n" +
+                        "**九四**：由豫，大有得。勿疑。朋盍簪。\n" +
+                        "**六三**：盱豫，悔。遲有悔。\n" +
+                        "**六二**：介于石，不終日，貞吉。\n" +
+                        "**初六**：鳴豫，凶。",
+                    modern: "**上六**：**回頭是岸** 即便犯了錯，只要在最後關頭懂得「回頭是岸」，依然能化險為夷。\n" +
+                        "**六五**：**盛世隱憂** 處於安樂盛世的高位，往往容易產生流弊（如行政效率低落）。雖然有問題，但只要制度根本尚在，仍能維持運作。\n" +
+                        "**九四**：**誠信分享** 真正的喜悅來自於志同道合的連結。只要誠信待人、大方分享資源與願景，就能凝聚眾人力量成就大事。\n" +
+                        "**六三**：**自立之樂** 若喜悅是建立在依附他人或觀望投機上，是非常危險的。真正的快樂應源於自立自強，而非乞求他人的施捨。\n" +
+                        "**六二**：**居安思危** 安樂的環境中最難得的是「清醒」。具備敏銳的洞察力不沉溺於安逸，才能立於不敗之地。\n" +
+                        "**初六**：**戒得意忘形** 喜悅時最忌諱「得意忘形」。過度炫耀會引起他人的嫉妒或讓自己喪失警覺。"
+                },
+                16: {
+                    desc: "順水行舟之象，隨遇而安之意。",
+                    detail: "震木在兌澤之下，木必隨水漂盪，隨者，順也。有去舊迎新之吉象，宜與人合作，忌三心兩意或獨斷獨行。\n\n" +
+                        "**隨：元亨。利貞。无咎。**\n\n" +
+                        "**上六**：拘系之，乃從維之。王用亨于西山。\n" +
+                        "**九五**：孚于嘉，吉。\n" +
+                        "**九四**：隨有獲，貞凶。有孚在道，以明，何咎。\n" +
+                        "**六三**：系丈夫，失小子。隨有求得，利居貞。\n" +
+                        "**六二**：系小子，失丈夫。\n" +
+                        "**初九**：官有渝，貞吉。出門交有功。",
+                    modern: "**上六**：**心靈契合** 隨順的最高境界是「心靈的契合」。不是靠強迫，而是靠長久建立的誠信與德行，讓人們甚至在困難時刻也願意與你緊緊相依。\n" +
+                        "**九五**：**追隨真理** 這是全卦的核心，明智的領導者懂得追隨真理與賢才。當你選擇與「對的原則」對齊，成功自會水到渠成。\n" +
+                        "**九四**：**誠信領導** 權勢在手時追隨者眾多，此時最忌利誘與權謀。要必須堅持明確的原則與誠信，才不會在複雜的權力鬥爭中翻車。\n" +
+                        "**六三**：**捨低就高** 當你選擇與優秀者同行，必然要放棄舊有的低層次習氣。這種「有捨才有得」的追隨，是自我提升的捷徑。\n" +
+                        "**六二**：**慎選對象** 選擇追隨的對象非常重要。若只貪圖眼前安逸，會讓你錯失提升自我的機會。\n" +
+                        "**初九**：**開放心態** 環境改變時切莫固執己見。主動走出舒適圈，接觸新朋友與新事物，這種開放的姿態將為你開啟全新的轉機。"
+                },
+                17: {
+                    desc: "物腐蟲生之象。不進則退之意。",
+                    detail: "風入山下，閉而不出，物腐生蟲，意氣不通，因循敗事。\n諸事不如意，艱難迷惑，宜大膽革新，否則內憂外患。\n\n" +
+                        "**蠱：元亨。利涉大川。先甲三日，後甲三日。**\n\n" +
+                        "**上九**：不事王侯，高尚其事。\n" +
+                        "**六五**：幹父之蠱，用譽。\n" +
+                        "**六四**：裕父之蠱，往見吝。\n" +
+                        "**九三**：幹父之蠱，小有悔，无大咎。\n" +
+                        "**九二**：幹母之蠱，不可貞。\n" +
+                        "**初六**：幹父之蠱，有子考，无咎，厲終吉。",
+                    modern: "**上九**：**功成身退** 當舊有的問題已經解決，懂得功成身退，轉而追求更高層次的精神生活，是最高尚的終局。\n" +
+                        "**六五**：**中庸革新** 以中庸與智慧進行改革，不僅能解決問題，還能建立極高的威信。\n" +
+                        "**六四**：**戒因循苟且** 對問題視而不見、姑息養奸，只會讓腐敗加速蔓延，最終導致情況惡化到無法收拾的地步。\n" +
+                        "**九三**：**權衡代價** 改革難免會傷到感情或出現小紕漏，只要方向正確，這種代價是可以接受的。\n" +
+                        "**九二**：**柔性治理** 改革時要考慮情感因素。處理親近之人或老員工的錯誤時，手段要柔和，以減少改革的阻力與反彈。\n" +
+                        "**初六**：**承接挑戰** 面對前人留下的爛攤子，要有勇氣承接並修正。雖然起步維艱，但這是證明你價值的最好時機。"
+                },
+                18: {
+                    desc: "居高臨下之象，循序漸進之意。",
+                    detail: "**十二消息卦：丑月**\n\n" +
+                        "池澤之水灌溉地面萬物，相輔相成，生生不息。諸事亨通上下和合，前途有望，但不宜過於急進。\n\n" +
+                        "**臨：元亨。利貞。至于八月有凶。**\n\n" +
+                        "**上六**：敦臨，吉无咎。\n" +
+                        "**六五**：知臨，大君之宜，吉。\n" +
+                        "**六四**：至臨，无咎。\n" +
+                        "**六三**：甘臨，无攸利。既憂之，无咎。\n" +
+                        "**九二**：咸臨，吉无不利。\n" +
+                        "**初九**：咸臨，貞吉。",
+                    modern: "**上六**：**敦厚終局** 無論成就多高，始終保持那份「敦厚與初心」。用最誠摯的態度對待他人，才能保住長久的成功。\n" +
+                        "**六五**：**知人善任** 睿智的領導者不需事必躬親，而是懂得選賢任能，透過完善的制度與對的人來掌控大局。\n" +
+                        "**六四**：**虛心求教** 身處高位卻能放下架子、主動親近並虛心聽取基層的意見，是最明智的管理方式。\n" +
+                        "**六三**：**戒除浮誇** 靠耍手段或虛招應付工作，將面臨危機。能及時察覺這種浮誇的危險並回歸踏實，尚能化險為夷。\n" +
+                        "**九二**：**剛正感召** 你的影響力正在擴大，只要堅持剛正的原則，並配合溫和的態度去與人交往，所有的計畫都將取得顯著進展。\n" +
+                        "**初九**：**至誠合作** 憑藉內心的誠意去感召他人，與志同道合的人一起行動，只要方向正確，會非常順利。"
+                },
+                19: {
+                    desc: "風雲萬測之象，觀察入微之意。",
+                    detail: "**十二消息卦：酉月**\n\n" +
+                        "風運行於坤地之上，喻有周遊觀覽之意。\n處身於變化之中，宜多觀察入微。忌急進行事。\n\n" +
+                        "**觀：盥而不荐，有孚顒若。**\n\n" +
+                        "**上九**：觀其生，君子无咎。\n" +
+                        "**九五**：觀我生，君子无咎。\n" +
+                        "**六四**：觀國之光，利用賓于王。\n" +
+                        "**六三**：觀我生，進退。\n" +
+                        "**六二**：窺觀，利女貞。\n" +
+                        "**初六**：童觀，小人无咎，君子吝。。",
+                    modern: "**上九**：**大局視野** 關注點從個人利益提升到整體福祉與長遠價值。這是一種心懷天下的格局，能達到大境界的圓滿。\n" +
+                        "**九五**：**以身作則** 身處高位，你的一舉一動都在別人的觀察中。唯有以身作則、完善人格，才能贏得真正的尊敬。\n" +
+                        "**六四**：**趨勢洞察** 懂得觀察大趨並學習優秀者的長處。這時利於引薦、求職或尋求與高層次的平台合作。\n" +
+                        "**六三**：**內省智慧** 行動前深度檢視自己的實力、動機與所處環境。唯有看清自己，才能決定何時該進、何時該退。\n" +
+                        "**六二**：**打破成見** 眼界被侷限在目前的小圈子或固有成見中。只從狹小的視角看世界，難以建立宏大的事業格局。\n" +
+                        "**初六**：**拒絕淺薄** 處事不能走馬看花或只看表象。若身負重任卻眼光淺薄，會導致錯誤的決策。"
+                },
+                20: {
+                    desc: "嚴刊峻法之象。防患未然之意。",
+                    detail: "口中有物，必須努力咬斷，才能合攏，乃諸事被阻，務必去除，方可成功。\n諸事阻礙，紛爭難免，宜守成規，不為利誘，問題可解決。\n\n" +
+                        "**噬嗑：亨。利用獄。**\n\n" +
+                        "**上九**：何校滅耳，凶。\n" +
+                        "**六五**：噬乾肉，得黃金，貞厲，无咎。\n" +
+                        "**九四**：噬乾胏，得金矢，利艱貞，吉。\n" +
+                        "**六三**：噬臘肉，遇毒；小吝，无咎。\n" +
+                        "**六二**：噬膚滅鼻，无咎。\n" +
+                        "**初九**：屨校滅趾，无咎。",
+                    modern: "**上九**：**執迷不悟的惡果** 若對先前的警告視而不見，對小錯不加反省，最終將招致無法挽回的嚴厲懲罰。\n" +
+                        "**六五**：**剛柔並濟** 身處高位處理紛爭，既要具備剛毅的決斷力，也要守住中庸的公正。雖然過程如履薄冰，但能處理得恰到好處。\n" +
+                        "**九四**：**剛直破障** 阻礙極其堅硬且處理費力。此時必須秉持如箭頭般「剛直」的原則，克服萬難才能見到正義。\n" +
+                        "**六三**：**老問題的反彈** 處理久遠且複雜的問題時，往往會遭遇意想不到的阻力或負面情緒回撲，要有心理準備應對。\n" +
+                        "**六二**：**果斷止亂** 處理是非鮮明、容易解決的事情時，行動要迅速果斷，即便稍微嚴厲一點也無妨。\n" +
+                        "**初九**：**防微杜漸** 在錯誤剛開始、惡習剛露頭時給予適當的管教，是為了防止日後陷於深淵。"
+                },
+                21: {
+                    desc: "爭妍鬥麗之象，粉飾妝扮之意。",
+                    detail: "日落西山下，照耀通明，華美燦爛。\n表面風光內裏空虛，必須充實自己，凡事踏實，按部就班。\n\n" +
+                        "**賁：亨。小利有攸往。**\n\n" +
+                        "**上九**：白賁，无咎。\n" +
+                        "**六五**：賁於丘園，束帛戔戔，吝，終吉。\n" +
+                        "**六四**：賁如皤如，白馬翰如，匪寇婚媾。\n" +
+                        "**九三**：賁如濡如，永貞吉。\n" +
+                        "**六二**：賁其須。\n" +
+                        "**初九**：賁其趾，舍車而徒。",
+                    modern: "**上九**：**白賁無咎** 裝飾的最高境界是「不裝飾」，是回歸自然與真理。當修養達到巔峰，外在的虛名已不重要，內在的光華自能照人。\n" +
+                        "**六五**：**誠信為本** 真正的高層次交往不在於禮物的昂貴，而在於誠懇的內心。在資源有限時，誠信能彌補形式上的不足。\n" +
+                        "**六四**：**反璞歸真** 真誠、素雅的態度能贏得真正的夥伴，並消除不必要的誤解與隔閡。\n" +
+                        "**九三**：**警惕享樂** 具備內涵且風度翩翩固然是好，但不要沉溺於享樂，唯有守住初心，才能長久。\n" +
+                        "**六二**：**拒絕附庸** 裝飾必須依附於本質（如鬍鬚依附臉部）。如果沒有實力，再華麗的包裝也只是附庸，缺乏獨立的人格與價值。\n" +
+                        "**初九**：**腳踏實地** 在資歷尚淺時，與其追求排場，不如強化自己的基本功，保持君子的清高與自立。"
+                },
+                22: {
+                    desc: "群陰剝陽之象，去舊生新之意。",
+                    detail: "**十二消息卦：戌月**\n\n" +
+                        "山附於地上喻石崩塌而附落於地面上，五陰迫一陽，正義被損。\n惡運纏身，宜重身部署，不宜自作聰明，防被水子及小人連累。\n\n" +
+                        "**剝：不利。有攸往。**\n\n" +
+                        "**上九**：碩果不食，君子得輿，小人剝廬\n" +
+                        "**六五**：貫魚，以宮人寵，无不利。\n" +
+                        "**六四**：剝牀以膚，凶。\n" +
+                        "**六三**：剝之，无咎。\n" +
+                        "**六二**：剝牀以辨，蔑貞凶。\n" +
+                        "**初六**：剝牀以足，蔑貞凶。",
+                    modern: "**上九**：**碩果不食** 物極必反。最黑暗時刻往往保留著最後的生機（種子）。君子守住這份希望就能迎來重生；而只顧剝奪他人者，終將毀掉自己生存的基礎。\n" +
+                        "**六五**：**化敵為友** 處於劣勢，若能化敵為友團結眾人，並展現出溫順配合的姿態，反而能化解衝突獲得安穩。\n" +
+                        "**六四**：**果斷避險** 危機爆發，直接威脅到生存根基。此時任何僥倖心理都是致命的，應果斷採取避險措施。\n" +
+                        "**六三**：**保持清醒** 當身邊的人都在隨波逐流，若你能保持清醒並與之劃清界限，便能免受牽連。\n" +
+                        "**六二**：**深切憂患** 危機進一步惡化。此時單憑個人力量已難以挽回，必須要有極強的憂患意識，做好最壞打算。\n" +
+                        "**初六**：**防微杜漸** 危機往往從最基層、最細微處開始萌芽。當基開始動搖時，若不警覺，災難必至。"
+                },
+                23: {
+                    desc: "萬物更新之象，重修破舊之意。",
+                    detail: "**十二消息卦：子月**\n\n" +
+                        "雷在地中振發，喻春回大地，一元復始，萬象更生。開運亨通之象，萬事不宜急進，按部就班可成。\n\n" +
+                        "**復：亨。出入无疾，朋來无咎。反復其道，七日來復，利有攸往。**\n\n" +
+                        "**上六**：迷復，凶，有災眚。用行師，終有大敗，以其國君，凶；至于十年，不克征。\n" +
+                        "**六五**：敦復，无悔。\n" +
+                        "**六四**：中行獨復。\n" +
+                        "**六三**：頻復，厲无咎。\n" +
+                        "**六二**：休復，吉。\n" +
+                        "**初九**：不復遠，无只悔，元吉。",
+                    modern: "**上六**：**執迷不悟** 當所有提醒都已出現，卻仍執意在錯誤的道路上狂奔，最終將面臨無法挽回的崩潰。\n" +
+                        "**六五**：**至誠自省** 回歸不是表演給別人看的，而是內心深處的自省。用誠實面對自己的過錯，靈魂才能獲得真正的平靜。\n" +
+                        "**六四**：**獨行守正** 當周遭的人群都在墮落或迷失時，你是否有勇氣孤身一人走回正確的路？\n" +
+                        "**六三**：**掙扎進步** 意志不堅者在舊習氣與理智之間反覆掙扎。雖然過程痛苦且效率低下，但「改」總比「不改」好。\n" +
+                        "**六二**：**擇善而從** 看到優秀的人（初九）改正了，毫不猶豫地跟隨回歸。這是一種**「擇善而從」**的修養，不需要費力就能獲得好結果。\n" +
+                        "**初九**：**不遠之復** 犯錯不可怕，可怕的是執迷不悟。早一步覺醒回頭，損失最小，成就最高。"
+                },
+                24: {
+                    desc: "飛來橫禍之象，守正安常之意。",
+                    detail: "雷動於天，陽氣舒發，乃自然之象，為真實無虛妄之意。\n凡事宜守正，若不行正道，行為不檢者，必招災禍。\n\n" +
+                        "**無妄：元亨。利貞。其匪正有眚，不利有攸往。**\n\n" +
+                        "**上九**：無妄，行有眚，无攸利。\n" +
+                        "**九五**：無妄之疾，勿藥有喜。\n" +
+                        "**九四**：可貞，无咎。\n" +
+                        "**六三**：無妄之災，或系之牛，行人之得，邑人之災。\n" +
+                        "**六二**：不耕獲，不菑畬，則利有攸往。\n" +
+                        "**初九**：無妄，往吉。",
+                    modern: "**上九**：**審時度勢** 光有真誠是不夠的。若大環境時機未到，即便是出發點良善的行動也會變成「妄動」。\n" +
+                        "**九五**：**靜待自癒** 有些問題是自然產生，也會自然消失。慌忙亂投醫或過度折騰反而壞事。保持冷靜，讓事物回歸其自然秩序。\n" +
+                        "**九四**：**守心不動** 只要內心像岩石般堅定，不被外界的誘惑或混亂所動搖，就不會做出妄動的決定。\n" +
+                        "**六三**：**無妄之災** 即便自己沒犯錯，也會受外在因素牽連。這提醒我們：面對飛來橫禍要以平常心處之，這是人生必經的無常。\n" +
+                        "**六二**：**專注當下** 專注於當下的過程，不要被「急於求成」的貪念所牽絆，成功的機會反而更大。\n" +
+                        "**初九**：**動機決定成敗** 在計畫開始時，只要出發點是真誠、正確的，儘管放心去做。"
+                },
+                25: {
+                    desc: "淺水行舟之象，積少成大之意。",
+                    detail: "天之大而在山之中，以小阻大，以陰畜陽，為止為養。\n處事不可好高驚速，宜腳踏實地，可成大事，忌目空一切。\n\n" +
+                        "**大畜：利貞，不家食吉，利涉大川。**\n\n" +
+                        "**上九**：何天之衢，亨。\n" +
+                        "**六五**：豶豕之牙，吉。\n" +
+                        "**六四**：童牛之牿，元吉。\n" +
+                        "**九三**：良馬逐，利艱貞。曰閑輿衛，利有攸往。\n" +
+                        "**九二**：輿說輹。\n" +
+                        "**初九**：有厲利已。",
+                    modern: "**上九**：**雲行雨施** 長期的累積終於迎來爆發。所有的障礙皆已消失，這是大成功的時刻，你的才華將得到最徹底的施展。\n" +
+                        "**六五**：**源頭化解** 面對強大的阻力，硬碰硬不如從源頭化解問題的動力。\n" +
+                        "**六四**：**防微杜漸** 在問題還小的時候就建立制度或習慣來約束，能省去日後巨大的麻煩。\n" +
+                        "**九三**：**紮實根基** 不要急於表現。專注把基本功練紮實，才能在未來大展身手。\n" +
+                        "**九二**：**主動等待** 看清形勢對自己不利後，主動停止行動以等待更好的時機。這不是退縮，是一種「蓄」的智慧。\n" +
+                        "**初九**：**充實自我** 在計畫剛推行時若感覺阻力巨大，應暫時停下。回頭充實自己的實力，比盲目硬衝更加明智。"
+                },
+                26: {
+                    desc: "慎言節食之象，休養生息之意。",
+                    detail: "形如口腔之象，取其飲食之象，須慎言，注重日常生活規律。\n處事欠缺周詳考慮，要守正道而行事方吉。\n\n" +
+                        "**頤：貞吉。觀頤，自求口實。**\n\n" +
+                        "**上九**：由頤，厲吉，利涉大川。\n" +
+                        "**六五**：拂經，居貞吉，不可涉大川。\n" +
+                        "**六四**：顛頤吉，虎視眈眈，其欲逐逐，无咎。\n" +
+                        "**六三**：拂頤，貞凶，十年勿用，无攸利。\n" +
+                        "**六二**：顛頤，拂經，于丘頤，征凶。\n" +
+                        "**初九**：舍爾靈龜，觀我朵頤，凶。",
+                    modern: "**上九**：**擔當重任。** 作為全卦唯一的陽爻。你擁有支撐與養育他人的力量。具備實力者應勇於承擔責任，你的無私付出將帶來巨大的成就。\n" +
+                        "**六五**：**量力而為** 清楚自己的局限，守住現狀而不輕舉妄動；在能力不足時，懂得「被動接受養護」也是一種修煉。\n" +
+                        "**六四**：**正當求援** 若是為了更高的目標而尋求資源，只要目標正當且專注，是吉祥的。\n" +
+                        "**六三**：**戒除虛榮** 過度追求口腹之欲或虛榮的享受，會消磨意志。這時不適合做任何大變動，需要長時間的自我修正。\n" +
+                        "**六二**：**求人不如求己** 錯誤的依賴別人，或用不正當的方式謀生，會讓你陷入困境。\n" +
+                        "**初九**：**莫失自我** 每個人都有獨一無二的價值（靈龜），只羨慕別人成功而喪失自我、隨波逐流，處境會變得卑微且危險。"
+                },
+                27: {
+                    desc: "不勝負荷之象，反省過失之意。",
+                    detail: "中間四陽爻，為結實之樑，但初爻為陰爻，力弱不支，則勢將摧折。\n有力不從心，負擔過重之象，多煩惱，防官非及水險。\n\n" +
+                        "**大過：棟橈，利有攸往，亨。**\n\n" +
+                        "**上六**：過涉滅頂，凶，无咎。\n" +
+                        "**九五**：枯楊生華，老婦得其士夫，无咎无譽。\n" +
+                        "**九四**：棟隆，吉。有它吝。\n" +
+                        "**九三**：棟橈，凶。\n" +
+                        "**九二**：枯楊生稊，老夫得其女妻，无不利。\n" +
+                        "**初六**：藉用白茅，无咎。",
+                    modern: "**上六**：**求仁得仁** 在極端情況下明知不可為而為之。即便最終結果不盡如人意，為了大義而義無反顧，在道義與精神上是圓滿的。\n" +
+                        "**九五**：**虛幻繁榮** 暫時維持了體面，卻缺乏實質的長久生命力（如枯木開花）。這是一個警訊，提醒我們別被表面的穩定迷惑。\n" +
+                        "**九四**：**向下紮根** 你具備支撐大局的能力，但關鍵在於「向下連結」。不要單打獨鬥，爭取基層夥伴的支持，才能穩固局勢。\n" +
+                        "**九三**：**戒剛愎自用** 壓力已達極限！若仍自恃剛強、拒絕調整策略或尋求外援，最終會因過度緊繃而徹底崩潰。\n" +
+                        "**九二**：**非常合作** 困境中別拘泥於常規。透過看似「不尋常」或「年齡/地位不對等」的合作（如老夫得少妻），反而能激發出轉機。\n" +
+                        "**初六**：**謹慎起步** 壓力巨大的起點必須極度細心。如同在地上鋪設白茅承接祭品，只要態度謙卑、細節到位，就能化險為夷。"
+                },
+                28: {
+                    desc: "重重象陷之象，向下內斂之意。",
+                    detail: "**四大難卦**\n兩水重疊，坎為險，進固險，退亦險，進退兩難。\n危險重重，宜沉著應對，保持心境開朗，凡事莫與人爭。\n\n" +
+                        "**坎：習坎，有孚維心，亨。行有尚。**\n\n" +
+                        "**上六**：係用徽纆，寘于叢棘，三歲不得，凶。\n" +
+                        "**九五**：坎不盈，祗既平，无咎。\n" +
+                        "**六四**：樽酒簋貳，用缶，納約自牖，終无咎。\n" +
+                        "**六三**：來之坎坎，險且枕，入于坎窞，勿用。\n" +
+                        "**九二**：坎有險，求小得。\n" +
+                        "**初六**：習坎，入于坎窞，凶。",
+                    modern: "**上六**：**執迷不悟。** 在困境中依然執意違背規則，最終會讓自己陷入無法回頭的絕境失去脫困的機會。\n" +
+                        "**九五**：**水滿自溢** 困境已接近尾聲，最重要的是保持冷靜。不急功近利；當累積足夠時水自然會流向平坦處，脫困指日可待。\n" +
+                        "**六四**：**返璞歸真** 物資匱乏或艱難時刻，虛禮已無意義。用真誠樸實的心與人交往，「共患難」的真誠能換來意想不到的支援。\n" +
+                        "**六三**：**以靜待變** 局勢不明時，最好的策略是「不動」。勉強行動只會加速滅亡，「等待」並非消極，而是有價值的戰略行動。\n" +
+                        "**九二**：**小步快跑** 面對巨大困境別妄想一蹴而就。先求穩，爭取每一個微小的成果，這才是日後徹底脫困的基石。\n" +
+                        "**初六**：**戒懼止損** 環境惡劣時，若因恐懼而自亂陣腳，或陷入消極應對的慣性，只會越陷越深而喪失最後轉機。"
+                },
+                29: {
+                    desc: "麗日當天之象，光明遠大之意。",
+                    detail: "兩離火相重，上下通明之象，火有氣，但無形，主不實不定之意。\n外觀極盛，烈日當天之象，凡事不宜急進及意氣用事。\n\n" +
+                        "**離：利貞。亨。畜牝牛，吉。**\n\n" +
+                        "**上九**：王用出征，有嘉折首，獲其匪丑，无咎。\n" +
+                        "**六五**：出涕沱若，戚嗟若，吉。\n" +
+                        "**九四**：突如其來如，焚如，死如，棄如。\n" +
+                        "**九三**：日昃之離，不鼓缶而歌，則大耋之嗟，凶。\n" +
+                        "**六二**：黃離，元吉。\n" +
+                        "**初九**：履錯然，敬之无咎。",
+                    modern: "**上九**：**精準、決斷** 處理問題要直擊核心、擒賊擒王，同時對被脅迫的從犯展現寬容。這是高度智慧與慈悲的決斷力。\n" +
+                        "**六五**：**居安思危** 身處高位仍保持憂患意識而非傲慢。這種對局勢的敬畏能讓你保持清醒，在危機中尋得轉機。\n" +
+                        "**九四**：**急功近利** 氣勢凌人、急於求成者，雖然有才華但光芒亦如流星般轉瞬即逝。不加節制的擴張最終結局往往淒慘。\n" +
+                        "**九三**：**豁達面對** 事物有興必有衰。好景結束或面臨低潮時，與其悲觀嘆息，不如以豁達的心態接納人生的無常。\n" +
+                        "**六二**：**中庸之美** 離卦最完美的一爻。火若太烈會燒毀一切，太弱則不明。保持中正、平和的態度，不激進也不消極，才能發揮最大的影響力。\n" +
+                        "**初九**：**謹慎起步** 面對新環境或複雜事物，容易眼花繚亂。保持恭敬謹慎的態度，能防止你走錯路。"
+                },
+                30: {
+                    desc: "兩性交感之象，往來無阻之意。",
+                    detail: "少男在少女之下，彼此感應象徵男女新婚，兩性交感。\n如意吉祥，但勿為不正當感情意亂情迷。\n\n" +
+                        "**咸：亨。利貞。取女吉。**\n\n" +
+                        "**上六**：咸其輔，頰，舌。\n" +
+                        "**九五**：咸其脢，无悔。\n" +
+                        "**九四**：貞吉悔亡，憧憧往來，朋從爾思。\n" +
+                        "**九三**：咸其股，執其隨，往吝。\n" +
+                        "**六二**：咸其腓，凶，居吉。\n" +
+                        "**初六**：咸其拇。",
+                    modern: "**上六**：**空口白話** 若交流只停留在甜言蜜語或表面應酬，缺乏內心的真誠與實際行動，這種關係極其膚淺難以持久。\n" +
+                        "**九五**：**理智的平淡** 缺乏激情的熱共鳴，因保持了冷靜與理智，反而能避免犯錯。這是一種「平淡中求穩」的境界。\n" +
+                        "**九四**：**純粹的力量** 咸卦的核心。感應應是自然、無私且真誠的。若心思太過功利或反覆不定，感應力就會枯竭，無法真正打動人心。\n" +
+                        "**九三**：**拒絕盲從** 這比六二更嚴重，若完全失去了主體性，別人做什麼就跟著做什麼。這種缺乏獨立思考的「感應」毫無價值。\n" +
+                        "**六二**：**保持定力** 缺乏主見地隨波逐流會出問題。保持定力，靜觀其變。\n" +
+                        "**初六**：**微光乍現** 感應剛萌芽還非常微弱。此時僅止於內心的「心動」，安靜觀察感受，不要急著採取行動。"
+                },
+                31: {
+                    desc: "夫婦恆常之象，努力不懈之意。",
+                    detail: "震者為動，宜向外發展，巽為入為內向，一內一外，各居本位，故能永恆不變，喻夫妻之道。\n萬事亨通，能恆久努力，安守本份則吉，妄動則招禍。\n\n" +
+                        "**恆：亨，无咎。利貞，利有攸往。**\n\n" +
+                        "**上六**：振恆，凶。\n" +
+                        "**六五**：恆其德，貞，婦人吉，夫子凶。\n" +
+                        "**九四**：田无禽。\n" +
+                        "**九三**：不恆其德，或承之羞，貞吝。\n" +
+                        "**九二**：悔亡。\n" +
+                        "**初六**：浚恆，貞凶，无攸利。",
+                    modern: "**上六**：**戒頻繁折騰** 在該安定時內心焦躁、反覆變動，是「假動態」。這種不安分的性格最容易導致崩潰，也違背了恆久的本意。\n" +
+                        "**六五**：**靈活的恆久** 恆久不是盲目守舊。若身為決策者卻只會死守教條、不懂隨機應變，反而會招致失敗。\n" +
+                        "**九四**：**目標檢視** 恆久不代表在「錯誤的方法」上盲目堅持。若努力過後卻沒成效，應優先檢查目標與手段是否正確。\n" +
+                        "**九三**：**毅力與信用** 性格多變、承諾不兌現的人會徹底失去信用。**沒有毅力與操守的人終將一事無成**。\n" +
+                        "**九二**：**守中不激進** 在長久經營的道路上，不需要表現得太過激進或急於求成，保持中庸、適度的節奏，內心的擔憂自會消失。\n" +
+                        "**初六**：**莫強求** 在關係或事業剛開始時就要求地老天荒，這是一種壓力。真正的恆久是自然形成的，不是強求來的。"
+                },
+                32: {
+                    desc: "掘井無泉之象，韜光養晦之意。",
+                    detail: "**十二消息卦：未月**\n\n" +
+                        "遯者遁也，山在天之下，陰漸長，而陽漸消，宜退避三舍。\n小人道長，君子道消，凡事宜退不宜進，養誨修身。\n" +
+                        "**遯：亨。小利貞。**\n\n" +
+                        "**上九**：肥遯，无不利。\n" +
+                        "**九五**：嘉遯，貞吉。\n" +
+                        "**九四**：好遯君子吉，小人否。\n" +
+                        "**九三**：系遯，有疾厲，畜臣妾吉。\n" +
+                        "**六二**：執之用黃牛之革，莫之勝說。\n" +
+                        "**初六**：遯尾，厲，勿用有攸往。。",
+                    modern: "**上九**：**心無罣礙** 看透世事，無憂無慮大步離去。這是一種心靈與現實的雙重解脫。\n" +
+                        "**九五**：**華麗轉身。**在最恰當的時機、以最體面的方式退出，不僅保全了自己，還贏得了尊重。\n" +
+                        "**九四**：**斷捨離** 成功的撤退需要理智戰勝情感。君子懂得放下「喜好」來服從「大勢」。\n" +
+                        "**九三**：**猶豫** 該轉身時，捨不得名利、感情或舊有包袱而猶豫，這會導致錯失撤退的良機。\n" +
+                        "**六二**：**外退內堅** 環境逼你退隱，但內心的理想與原則要像「牛皮繩」般堅韌。人可以撤退但人格與底線絕不動搖。\n" +
+                        "**初六**：**反應遲鈍** 形勢惡化時最後察覺並想撤退的人，將陷入極大危機。此時與其亂衝撞，不如保持靜止以自保。"
+                },
+                33: {
+                    desc: "雷電交加之象，聲威大壯之意。",
+                    detail: "**十二消息卦：卯月**\n\n" +
+                        "雷聲響亮，光明天際，為正大光明之象，又為強烈地動之象。\n運勢雖強，但己屆盛之時，宜心平氣和，否則反招失敗，須知物極必反。\n\n" +
+                        "**大壯：利貞。**\n\n" +
+                        "**上六**：羝羊觸藩，不能退，不能遂，无攸利，艱則吉。\n" +
+                        "**六五**：喪羊于易，无悔。\n" +
+                        "**九四**：貞吉悔亡，藩決不羸，壯于大輿之輹。\n" +
+                        "**九三**：小人用壯，君子用罔，貞厲。羝羊觸藩，羸其角。\n" +
+                        "**九二**：貞吉。\n" +
+                        "**初九**：壯于趾，征凶，有孚。",
+                    modern: "**上六**：**窮則思變** 強弩之末若還想硬闖，只會自討苦吃；停下腳步檢討困境，才可能迎來轉機。\n" +
+                        "**六五**：**以柔克剛** 主動放棄暴戾之氣，不再迷信強硬手段解決問題。這種大智若愚的轉變，反而能帶來真正的和諧。\n" +
+                        "**九四**：**順勢而行** 當阻礙消失、力量是成熟有組織的，此時如同大車載重，可以穩健地向遠大目標邁進。\n" +
+                        "**九三**：**戒恃才傲物** 這是大壯卦最嚴厲警告。只會用權力或蠻力強行壓制他人，最後受困、丟臉的會是自己。\n" +
+                        "**九二**：**內斂** 擁有一流實力卻選擇低調內斂。不顯山露水、不急於證明自己，這種「有實力但不張揚」的狀態最穩定。\n" +
+                        "**初九**：**根基未穩** 雖然你有能力，但位階尚低，根基不穩。這時急著表現實力，只會碰釘子。"
+                },
+                34: {
+                    desc: "滿地錦繡之象，良臣遇君之意。",
+                    detail: "日出地面，普照大地，有光明上進之象。\n事業、名望、財運皆吉，有加官晉爵之兆。\n\n" +
+                        "**晉：康侯用錫馬蕃庶，晝日三接。**\n\n" +
+                        "**上九**：晉其角，維用伐邑，厲吉无咎，貞吝。\n" +
+                        "**六五**：悔亡，失得勿恤，往吉无不利。\n" +
+                        "**九四**：晉如鼫鼠，貞厲。\n" +
+                        "**六三**：眾允，悔亡。\n" +
+                        "**六二**：晉如，愁如，貞吉。受茲介福，于其王母。\n" +
+                        "**初六**：晉如，摧如，貞吉。罔孚，裕无咎。",
+                    modern: "**上九**：**功成身退** 晉升到了頂點，不要再盲目開疆闢土，應回頭整頓內部。此時若過度強求反會損害名譽。\n" +
+                        "**六五**：**放下得失** 這是晉卦的核心智慧。身處高位若整天計較得失，反而會限制發展。放下小我，專注於更大的願景，成功將會隨之而來。\n" +
+                        "**九四**：**德不配位** 靠不正當手段上位或心術不正者。就像驚恐的松鼠，爬得越高跌得越慘，處境將會非常危險。\n" +
+                        "**六三**：**眾志成城** 晉升不再是個人努力，而是因為你代表了集體的利益，獲得了周圍人的肯定及推舉。\n" +
+                        "**六二**：**人品致勝** 感到孤立無援、沒有後台時，只要人品端正、守持中庸，自然會有貴人在關鍵時刻提供助力。\n" +
+                        "**初六**：**實力證言** 起步階段若遇流言蜚語或阻礙，切莫急著辯解。專注於提升實力與信用，用時間證實一切。"
+                },
+                35: {
+                    desc: "大地無光之象，棄明投暗之意。",
+                    detail: "太陽淹沒在坤地之下，大地黑暗，有失明之象。百事阻滯，小人加害，遇事多迷惑，宜守，靜待時機而動。\n\n" +
+                        "**明夷：利艱貞。**\n\n" +
+                        "**上六**：不明晦，初登于天，后入于地。\n" +
+                        "**六五**：箕子之明夷，利貞。\n" +
+                        "**六四**：入于左腹，獲明夷之心，出于門庭。\n" +
+                        "**九三**：明夷于南狩，得其大首，不可疾貞。\n" +
+                        "**六二**：明夷，夷于左股，用拯馬壯，吉。\n" +
+                        "**初九**：明夷于飛，垂其翼。君子于行，三日不食，有攸往，主人有言。",
+                    modern: "**上六**：**物極必反** 黑暗終將過去。這也警示：若獲得權力後變得狂傲昏庸，最終會讓自己陷入徹底的黑暗深淵。\n" +
+                        "**六五**：**大智若愚** 全卦最核心的智慧。身處不公或被打壓的環境，絕不可展露才華招致嫉妒；學會「裝傻」保護理想，才是最高明的生存之道。\n" +
+                        "**六四**：**徹底抽身** 當看透局勢已腐敗且不可救藥時，別再試圖修補。最好的選擇是抽身離去，保全自己不被同流合汙。\n" +
+                        "**九三**：**慎選反擊時機** 雖有機會解決問題，但黑暗勢力尚未散盡。此時若過於急躁會遭到反撲，必需耐心等待。\n" +
+                        "**六二**：**尋求外援** 身處困境且行動受限，若能找到得力的夥伴或資源（強壯的馬），仍能脫離險境。此時尋求外援至關重要。\n" +
+                        "**初九**：**當機立斷** 在危機剛露頭時就選擇離開，雖然過程會經歷貧困與誤解，但這是為了保全大義。"
+                },
+                36: {
+                    desc: "齊家治國之象，開花結果之意。",
+                    detail: "風吹火之象，助火之威，喻家人同心協力，發展事業。\n平安大吉，與人合作則易成，更有喜慶之象，如添丁婚嫁等。\n\n" +
+                        "**家人：利女貞。**\n\n" +
+                        "**上九**：有孚威如，終吉。\n" +
+                        "**九五**：王假有家，勿恤。吉。\n" +
+                        "**六四**：富家，大吉。\n" +
+                        "**九三**：家人嗃嗃，悔厲吉；婦子嘻嘻，終吝。\n" +
+                        "**六二**：无攸遂，在中饋，貞吉。\n" +
+                        "**初九**：閑有家，悔亡。",
+                    modern: "**上九**：**誠信立威** 威信源於高度的自律與誠信。當你對自己要求嚴格，他人自然會敬重你，事態也會隨之圓滿。\n" +
+                        "**九五**：**以身作則** 領導者不需要威嚇與高壓手段，透過人格魅力與正能量，讓各方心悅誠服地跟隨。\n" +
+                        "**六四**：**充實底氣** 透過勤奮與合理的理財，讓內部資源充沛。有了穩定的經濟與資源基礎，人心自然會安定。\n" +
+                        "**九三**：**原則** 管理不能只追求和氣而失去原則。適度的嚴肅與紀律，長遠來看是對團隊或家庭最好的保護。\n" +
+                        "**六二**：**專注後勤** 認清定位，目前最合適的是專注於內部支持、穩定情緒、完善細節，而非急著對外開疆拓土。\n" +
+                        "**初九**：**防微杜漸** 規矩必須從一開始就定好。建立規範與邊界，能為日後省去巨大的溝通與修正成本。"
+                },
+                37: {
+                    desc: "兩相乖違之象，陰陽失調之意。",
+                    detail: "離火向上，兌澤則向下，一上一下，兩相乖違，又二女同居，不得正位之象。\n氣運欠佳，諸事難成，有水火不容之象，宜處變不驚，異中求同。\n\n" +
+                        "**睽：小事吉。**\n\n" +
+                        "**上九**：睽孤， 見豕負涂，載鬼一車， 先張之弧，后說之弧，匪寇婚媾，往遇雨則吉。\n" +
+                        "**六五**：悔亡，厥宗噬膚，往何咎。\n" +
+                        "**九四**：睽孤，遇元夫，交孚，厲无咎。\n" +
+                        "**六三**：見輿曳，其牛掣，其人天且劓，无初有終。\n" +
+                        "**九二**：遇主于巷，无咎。\n" +
+                        "**初九**：悔亡，喪馬勿逐，自復；見惡人无咎。",
+                    modern: "**上九**：**冰釋前嫌** 許多矛盾源於過度猜忌。放下敵意後會發現對方並非對手；及時的溝通能洗淨誤會，讓關係回歸圓滿。\n" +
+                        "**六五**：**破冰** 關係開始軟化，這是主動修復的最佳時機，真誠的靠近會讓隔閡徹底消失。\n" +
+                        "**九四**：**志同道合** 即便被主流排擠，只要能找到一個真正理解你的知音同行，就足以對抗所有孤獨與困難。\n" +
+                        "**六三**：**堅守意志** 處於腹背受敵困境時，只要你的意志堅定，這種狀態終究會被打破。\n" +
+                        "**九二**：**非正式溝通** 當大環境或公開溝通受阻時，嘗試透過非正式管道、私下偶遇來交流更容易達成共識。\n" +
+                        "**初九**：**莫強求** 在矛盾中別急著挽回流失的關係，強求只會讓人走遠。對立場不同者，保持禮貌、避免衝突即可。"
+                },
+                38: {
+                    desc: "舉步為艱之象，前路難行之意。",
+                    detail: "**四大難卦**\n前路險陷，進退為谷，如跛者舉步為艱。\n多災多難，宜守正道，不可輕舉妄動。\n\n" +
+                        "**蹇：利西南，不利東北；利見大人，貞吉。**\n\n" +
+                        "**上六**：往蹇來碩，吉；利見大人。\n" +
+                        "**九五**：大蹇朋來。\n" +
+                        "**六四**：往蹇來連。\n" +
+                        "**九三**：往蹇來反。\n" +
+                        "**六二**：王臣蹇蹇，匪躬之故。\n" +
+                        "**初六**：往蹇，來譽。",
+                    modern: "**上六**：**絕處逢生。** 艱難已到極點。若能在此時「向內尋求智慧」或「請求高人指點」，目前的困境將轉化為寶貴的經驗或全新的機遇。\n" +
+                        "**九五**：**援軍現身** 這是全卦的轉機。若平時德行端正，在最黑暗時刻援軍必會出現。此時要主動釋放信號，讓外界知道你需要支援。\n" +
+                        "**六四**：**合縱連橫** 單打獨鬥不足以應付危機。放下身段尋求支持，集結眾人之力共同渡過難關。\n" +
+                        "**九三**：**退求其次** 外部環境若暫時無法突破。不如退回自己最熟悉的領域或核心團隊，重新凝聚力量以待時機。\n" +
+                        "**六二**：**克盡職守** 困境有時是職責所在（並非決策錯誤）。在這種「不得不為」的艱難中，保持使命感與初衷雖辛苦但無愧於心。\n" +
+                        "**初六**：**明哲保身** 環境不允許時，及時止步或撤回並非懦弱。這種遠見能讓你避開災禍，並贏得「深諳進退」的美名。"
+                },
+                39: {
+                    desc: "逃離厄運之象，遇困可解之意。",
+                    detail: "春雷大作，大地解凍，喻冬去春來，生機再現。宜把握良機，快速處理身邊困境，更宜出外求謀。\n\n" +
+                        "**解：利西南，无所往，其來復吉。有攸往，夙吉。**\n\n" +
+                        "**上六**：公用射隼，于高墉之上，獲之，无不利。\n" +
+                        "**六五**：君子維有解，吉；有孚于小人。\n" +
+                        "**九四**：解而拇，朋至斯孚。\n" +
+                        "**六三**：負且乘，致寇至，貞吝。\n" +
+                        "**九二**：田獲三狐，得黃矢，貞吉。\n" +
+                        "**初六**：无咎。",
+                    modern: "**上六**：**根除禍首** 長治久安的關鍵在於清除最後的隱患。行動應如射箭般準確、狠戾且快速，不留後患。\n" +
+                        "**六五**：**以德解怨** 真正的解脫是化敵為友。當你展現寬容與正直的高度，不僅能解決問題更能讓原本的阻力轉化為助力。\n" +
+                        "**九四**：**斷捨離** 若持續與層次低、格局小的人糾纏，真正的貴人便無法靠近。想要求變，先從清理社交圈開始。\n" +
+                        "**六三**：**戒之在驕** 危機解除後，切莫過於張揚或占據不屬於你的位置。因貪心而失了分寸，新的麻煩很快會再度找上門。\n" +
+                        "**九二**：**直擊痛點** 化解危機需找出隱藏的禍根（狐狸）。處理問題必須像箭矢般正直、果斷，絕不可拖泥帶水。\n" +
+                        "**初六**：**靜養待發** 困境初解宛如大病初癒。此時需要保持安靜、不要瞎折騰，就是最好的恢復狀態。"
+                },
+                40: {
+                    desc: "塞翁失馬之象，因損得益之意。",
+                    detail: "山高水深，各得其所，因損得益之象。\n現況諸事不順，有破財之象，雖先損失，但後反而得益，有因禍得福之象。\n\n" +
+                        "**損：有孚，元吉。无咎，可貞，利有攸往。曷之用？二簋可用享。**\n\n" +
+                        "**上九**：弗損益之，无咎，貞吉，利有攸往，得臣无家。\n" +
+                        "**六五**：或益之，十朋之龜弗克違，元吉。\n" +
+                        "**六四**：損其疾，使遄有喜，无咎。\n" +
+                        "**六三**：三人行，則損一人；一人行，則得其友。\n" +
+                        "**九二**：利貞，征凶，弗損益之。\n" +
+                        "**初九**：已事遄往，无咎，酌損之。",
+                    modern: "**上九**：**利而不害** 建立共贏系統的最高境界。你的存在本身就在創造價值，無需刻意犧牲，也能惠及天下、自利利他。\n" +
+                        "**六五**：**大捨大得** 當你願意損棄私欲、利他奉獻時，眾人與上天會回報你無法估量的價值。這是誠信帶來的「神來之福」。\n" +
+                        "**六四**：**自我修正** 「損」最重要的應用是戒掉壞習慣與負面情緒。減去內在的負擔，生命才能獲得真正的增益。\n" +
+                        "**六三**：**精簡** 夥伴太雜、選擇太多會分散力量。在關鍵時刻，要懂得捨棄多餘的聯繫，追求目標的純粹與步調同步。\n" +
+                        "**九二**：**守正而損** 真正的「損」不是委曲求全。守住原則與底氣，不過度卑微地討好他人，這種不卑不亢對局勢更有利。\n" +
+                        "**初九**：**量力而為** 助人是美德但不能盲目。在確保自己有餘力的前提下，精確且及時地給予幫助，才是最高效的奉獻。"
+                },
+                41: {
+                    desc: "積德行善之象，損上益下之意。",
+                    detail: "強風配快雷，聲威增長之象，長男配長女，夫婦合體，增益兒孫之象。\n現正當吉運，可得貴人之助而成功，宜施惠於人，施比受更為有福。\n\n" +
+                        "**益：利有攸往。利涉大川。**\n\n" +
+                        "**上九**：莫益之，或擊之，立心勿恆，凶。\n" +
+                        "**九五**：有孚惠心，勿問元吉。有孚惠我德。\n" +
+                        "**六四**：中行，告公從。利用為依遷國。\n" +
+                        "**六三**：益之用凶事，无咎。有孚中行，告公用圭。\n" +
+                        "**六二**：或益之，十朋之龜弗克違，永貞吉。王用享于帝，吉。\n" +
+                        "**初九**：利用為大作，元吉，无咎。",
+                    modern: "**上九**：**戒之在貪** 形勢大好卻只想自肥、不懂分享，或因走運而心浮氣躁。這種自私與傲慢會迅速引來反噬。\n" +
+                        "**九五**：**施比受更有福** 這是益卦最高境界。真心實意為他人創造價值。這種增益會形成正向循環，最終回饋你巨大的名望與成功。\n" +
+                        "**六四**：**順勢變革** 想法獲得決策層認同。這是進行轉型或體制改革的最佳時刻，只要手段溫和不走極端必能成功。\n" +
+                        "**六三**：**患難進步** 進步往往來自解決問題。在動盪環境中展現責任感，將危機轉化為轉機，反而能藉此提升地位。\n" +
+                        "**六二**：**厚德載物** 處位中正且誠信，資源會主動找上門。這是一種「被動的福氣」，前提是你的人品足以承載這份大禮。\n" +
+                        "**初九**：**機不可失** 當大時機來到，別畏首畏尾。若有長遠計畫，現在就是投入全力的最佳時機。"
+                },
+                42: {
+                    desc: "水滿成災之象，排除阻隔之意。",
+                    detail: "**十二消息卦：辰月**\n\n" +
+                        "澤水積滿而泛濫成災。又五陽爻之盛勢必除去唯一陰爻，故一陰孤立。\n困難及變動正在醞釀中，宜提高警覺，防微杜漸，果斷排除阻隔。\n\n" +
+                        "**夬：揚于王庭，孚號，有厲，告自邑，不利即戎，利有攸往。**\n\n" +
+                        "**上六**：无號，終有凶。\n" +
+                        "**九五**：莧陸夬夬，中行无咎。\n" +
+                        "**九四**：臀无膚，其行次且。牽羊悔亡，聞言不信。\n" +
+                        "**九三**：壯于頄，有凶。君子夬夬，獨行遇雨，若濡有慍，无咎。\n" +
+                        "**九二**：惕號，莫夜有戎，勿恤。\n" +
+                        "**初九**：壯于前趾，往不勝為咎。。",
+                    modern: "**上六**：**孤立無援** 在決斷時刻失去眾人支持，或因孤傲而脫離群眾。沒有基層力量的支撐，最終必陷入無路可走的絕境。\n" +
+                        "**九五**：**適度清除** 解決核心問題或身邊的小人，要像拔草般徹底。但目的是解決問題而非炫耀權力，應守持中庸、不走極端。\n" +
+                        "**九四**：**莫當龍頭** 身處尷尬位置且實力不足時，別試圖當出頭鳥。放下焦躁，跟隨有經驗的領導者行動才是上策。\n" +
+                        "**九三**：**喜怒不形於色** 最強的決斷是內斂。若將厭惡直接掛在臉上，只會引來對手瘋狂報復。在行動前，務必隱藏意圖。\n" +
+                        "**九二**：**居安思危** 只要內心時刻警惕、防範措施滴水不漏，對手就找不到任何可乘之機。\n" +
+                        "**初九**：**戒之在躁** 若在準備不足時就急著行動，反而會陷入困境。起步時穩定比速度更重要。"
+                },
+                43: {
+                    desc: "剛柔相遇之象，聚散隨緣之意。",
+                    detail: "**十二消息卦：午月**\n\n" +
+                        "風無孔不入，所吹到之處，暴露其間之物體，無一不與之相遇，為邂逅之意。\n陰長陽消，注意桃色災難，諸事阻濟，宜慎重行事。\n\n" +
+                        "**姤：女壯，勿用取女。**\n\n" +
+                        "**上九**：姤其角，吝，无咎。\n" +
+                        "**九五**：以杞包瓜，含章，有隕自天。\n" +
+                        "**九四**：包无魚，起凶。\n" +
+                        "**九三**：臀无膚，其行次且，厲，无大咎。\n" +
+                        "**九二**：包有魚，无咎，不利賓。\n" +
+                        "**初六**：系于金柅，貞吉，有攸往，見凶，羸豕踟躅。",
+                    modern: "**上九**：**孤高無援** 位置太高或性格過硬，導致你與機會、人才完全斷了聯繫。雖然沒犯錯，卻也陷入了無人合作的停滯期。\n" +
+                        "**九五**：**高明的包容。**這是姤卦中最高級的智慧。與其強硬排斥新勢力，不如用強大的格局與德行去感化、轉化它。含而不露的修養必得天助。\n" +
+                        "**九四**：**失民失位** 平時不體恤下屬、不積累資源，關鍵時刻身邊空無一人。缺乏群眾基礎，任何偉大計畫都注定失敗。\n" +
+                        "**九三**：**因禍得福** 內心想去嘗試危險的誘惑，卻因外在限制無法成行。雖然當下遺憾，但這種「動彈不得」反而讓你躲過一劫。\n" +
+                        "**九二**：**內部消化** 發現機會或問題時，先自行處理，不要隨便對外宣揚。低調管控，避免引入外部勢力讓事情變複雜。\n" +
+                        "**初六**：**防微杜漸。**這是全卦最重要的啟示。不好的習慣或隱患剛露頭時，必須立刻制止。別因它「看起來微小」就放任，否則日後難以收拾。"
+                },
+                44: {
+                    desc: "鯉躍龍門之象，精英薈萃之意。",
+                    detail: "澤在地上，水聚於泥土中，滋養草木，生長茂盛。\n吉運昌盛，又得長輩提擕，事業大利。\n\n" +
+                        "**萃：亨。王假有廟，利見大人，亨。利貞。用大牲吉，利有攸往。**\n\n" +
+                        "**上六**：齎咨涕洟，无咎。\n" +
+                        "**九五**：萃有位，无咎。匪孚，元永貞，悔亡。\n" +
+                        "**九四**：大吉，无咎。\n" +
+                        "**六三**：萃如，嗟如，无攸利，往无咎，小吝。\n" +
+                        "**六二**：引吉，无咎，孚乃利用禴。\n" +
+                        "**初六**：有孚不終，乃亂乃萃，若號一握為笑，勿恤，往无咎。",
+                    modern: "**上六**：**居安思危** 身處繁榮頂端，卻憂慮未來危機。這份悲觀其實是清醒，能讓你提前佈防，避開隨之而來的災禍。\n" +
+                        "**九五**：**誠信立威** 成為中心人物時，難免有人質疑。不必急著反擊，用時間與一致的行為展現公信力，眾人自會服氣。\n" +
+                        "**九四**：**全心奉獻** 九四雖然不是領導者（九五），卻是執行關鍵。此時若能全心投入、不計個人私利與功勞，能成就極大的事業。\n" +
+                        "**六三**：**主動爭取** 發現自己邊緣化時，別只顧著嘆氣。放下身段主動靠近核心圈，雖可能稍失面子，但總比孤立好。\n" +
+                        "**六二**：**誠懇為本** 想進入優秀圈子或吸引人才，不靠華麗包裝。真實、誠懇的態度，就是你打通人脈最好的通行證。\n" +
+                        "**初六**：**明確溝通** 人心浮動時，明確的溝通是止亂良藥。只要大家能確認共同目標，短暫的混亂終會化為歡樂。"
+                },
+                45: {
+                    desc: "風從地起之象，從弱成強之意。",
+                    detail: "上升，樹木從地上不斷生長向上，有進升之勢。名利雙收，發展開運之象。\n\n" +
+                        "**升：元亨，用見大人，勿恤，南征吉。**\n\n" +
+                        "**上六**：冥升，利于不息之貞。\n" +
+                        "**六五**：貞吉，升階。\n" +
+                        "**六四**：王用亨于岐山，吉无咎。\n" +
+                        "**九三**：升虛邑。\n" +
+                        "**九二**：孚乃利用禴，无咎。\n" +
+                        "**初六**：允升，大吉。",
+                    modern: "**上六**：**昇華** 當升到頂點，切莫盲目擴張。這時應停止追求外在的「位階」，轉而追求內在德行與境界的「昇華」。\n" +
+                        "**六五**：**穩紮穩打** 最理想的成功狀態。不走捷徑、不投機取巧，每一分成就都來自踏實的累積。\n" +
+                        "**六四**：**心懷敬畏** 身處高位必須展現對更高權威、社會規則或天道的敬畏。順應大環境的法則，才能站穩腳跟。\n" +
+                        "**九三**：**順勢而為** 目前競爭壓力小、阻礙極少。此時前進如入無人之境，應抓住機會果斷加速擴張。\n" +
+                        "**九二**：**重實去虛** 晉升不靠花言巧語或包裝。專注於內在誠信與紮實的成果，這種「硬實力」自然會贏得大眾認可。\n" +
+                        "**初六**：**贏得信任** 起步階段最重要的不是能力多強，而是你能否獲得關鍵人物（貴人）的認同與信任。"
+                },
+                46: {
+                    desc: "龍游淺水之象，守正待機之意。",
+                    detail: "**四大難卦**\n水在澤下，萬物不生，喻君子困窮，小人得志之象。\n諸事不如意，所謂龍游淺水遭蝦戲。\n\n" +
+                        "**困：亨，貞大人吉，无咎，有言不信。**\n\n" +
+                        "**上六**：困于葛藟，于臲甈，曰動悔。有悔，征吉。\n" +
+                        "**九五**：劓刖，困于赤紱，乃徐有說，利用祭祀。\n" +
+                        "**九四**：來徐徐，困于金車，吝，有終。\n" +
+                        "**六三**：困于石，據于蒺藜，入于其宮，不見其妻，凶。\n" +
+                        "**九二**：困于酒食，朱紱方來，利用亨祀，征凶，无咎。\n" +
+                        "**初六**：臀困于株木，入于幽谷，三歲不見。",
+                    modern: "**上六**：**突破心魔** 困境已到盡頭。問題開始鬆動，只要你敢突破心理障礙大膽跨出那一步，就能迎來新局。\n" +
+                        "**九五**：**誠信突圍** 身處高位卻腹背受敵。此時手段無效，唯有靠至死不渝的「誠信」與「人格魅力」才能化險為夷。\n" +
+                        "**九四**：**耐心等待** 求助於有力人士時，對方可能因各種事情令行動遲緩。雖然處境尷尬，但只要有耐心終能成功。\n" +
+                        "**六三**：**自作自受** 性格急躁、行為不正，導致對內外碰壁。這種進退失據的窘境，完全是自作自受。\n" +
+                        "**九二**：**回歸初心** 困境來自於物欲過重或應酬太多，讓你迷失方向。此時應推掉無謂社交，回歸本心，靜待時機。\n" +
+                        "**初六**：**拒絕消極** **最差的應對是**遇到困難就自怨自艾、縮在角落。越是消極、不願面對現實，困境持續的時間就越長。"
+                },
+                47: {
+                    desc: "汲水育民之象，井井有條之意。",
+                    detail: "水被植物吸收，滋養樹身又象徵汲器入地取水，有節約之意。\n井為靜物，不能移動，故射事不能急進，不如處之泰然更利。\n\n" +
+                        "**井：改邑不改井，无喪无得，往來井。井汔，至亦未繘。井羸其瓶，凶。**\n\n" +
+                        "**上六**：井收勿幕，有孚元吉。\n" +
+                        "**九五**：井冽，寒泉食。\n" +
+                        "**六四**：井甃，无咎。\n" +
+                        "**九三**：井渫不食，為我民惻，可用汲，王明，并受其福。\n" +
+                        "**九二**：井谷射鮒，瓮敝漏。\n" +
+                        "**初六**：井泥不食，舊井无禽。",
+                    modern: "**上六**：**大公無私** 這是井卦的圓滿。將你的智慧與成就大方分享給眾人，「不求私利」的胸懷，會帶來最長久的好運。\n" +
+                        "**九五**：**標竿楷模** 達到最佳狀態。你的才華與德行已成為標竿，能真正利益大眾，成為別人最強大的依靠。\n" +
+                        "**六四**：**蹲點修煉** 進度受阻時，先回頭加強基礎修繕自我。這不是停滯，是為了未來能走更遠的路。\n" +
+                        "**九三**：**懷才不遇** 實力已到位，只是還沒遇到伯樂。要守住節操，別因為沒人賞識就墮落。\n" +
+                        "**九二**：**莫貪小利** 空有才華卻志向卑微、只看眼前小利。這像拿破碗在廢井瞎忙，徒勞無功且浪費天賦。\n" +
+                        "**初六**：**拒絕空洞** 思想陳舊、不學無術，就像充滿淤泥的廢井。這種狀態下，別人瞧不起你，自己也失去活力。"
+                },
+                48: {
+                    desc: "鍊金成器之象，破舊納新之意。",
+                    detail: "兌金為被離火所燒，變革之象。\n凡事均在變動之中，宜去舊立新，乃革新之象。\n\n" +
+                        "**革：已日乃孚，元亨。利貞。悔亡。**\n\n" +
+                        "**上六**：君子豹變，小人革面，征凶，居貞吉。\n" +
+                        "**九五**：大人虎變，未占有孚。\n" +
+                        "**九四**：悔亡，有孚改命，吉。\n" +
+                        "**九三**：征凶，貞厲，革言三就，有孚。\n" +
+                        "**六二**：己日乃革之，征吉，无咎。\n" +
+                        "**初九**：鞏用黃牛之革。",
+                    modern: "**上六**：**鞏固成果** 大局已定，小細節的修補即可（小人革面）。此時應追求穩定，不宜再發動大規模變動。\n" +
+                        "**九五**：**虎變大吉 領導者的改革已獲得全面成功。像老虎換毛般煥然一新，誠信與格局展露無遺，不必占卜也知道大吉。\n" +
+                        "**九四**：**誠信立基** 改革的能量已蓄勢待發。只要動機純正且獲得眾人信任，大膽去改變現狀，必能獲得吉祥。\n" +
+                        "**九三**：**三思後行** 改革已進入關鍵期，內心難免急躁。切記不可衝動，要經過反覆討論、確認時機成熟後再採取行動。\n" +
+                        "**六二**：**時機成熟** 當改變的日子到來（己日），就應果斷行動。主動出擊去推行變革，會帶來非常好的結果。\n" +
+                        "**初九**：**固守待時** 力量不足、時機未成熟，像用黃牛皮緊緊捆綁。應先充實自己，安分守己，不要輕舉妄動。"
+                },
+                49: {
+                    desc: "鼎器烹調之象，去故取新之意。",
+                    detail: "木之上有離火，為烹飪之象，鼎有去舊立新，改過遷善之意。\n時運佳，事業有新景象。\n\n" +
+                        "**鼎：元吉，亨。**\n\n" +
+                        "**上九**：鼎玉鉉，大吉，无不利。\n" +
+                        "**六五**：鼎黃耳金鉉，利貞。\n" +
+                        "**九四**：鼎折足，覆公餗，其形渥，凶。\n" +
+                        "**九三**：鼎耳革，其行塞，雉膏不食，方雨虧悔，終吉。\n" +
+                        "**九二**：鼎有實，我仇有疾，不我能即，吉。\n" +
+                        "**初六**：鼎顛趾，利出否，得妾以其子，无咎。",
+                    modern: "**上九**：**剛柔並濟** 這是鼎卦最圓滿的終局。具備剛毅的實力卻擁有溫潤的態度，大吉大利，做什麼都順遂。\n" +
+                        "**六五**：**虛懷若谷** 身處高位且心存中道。像鼎的黃金耳與耳槓，能廣納良才並與其契合，這份格局會帶來持久的興旺。\n" +
+                        "**九四**：**德不配位** **這是最嚴厲的警告。**實力不足卻承擔重任，導致鼎足折斷、食物傾覆。這提醒我們要衡量自己的份量，以免招致奇辱。\n" +
+                        "**九三**：**懷才不遇** 空有才華卻因時機或人事不和而難以施展。這時應保持耐心，只要守正待時，最終仍會獲得應有的收穫。\n" +
+                        "**九二**：**守信避嫌** 剛起步且小有成就時，要防範他人的嫉妒或誘惑，守住本分，別人就無法動搖你。\n" +
+                        "**初六**：**除舊佈新** 為了裝新物，必須先翻轉鼎身倒出積垢。就像改革初期的陣痛，清除舊習雖狼狽，卻是成功的起點。"
+                },
+                50: {
+                    desc: "雷驚百里之象，驚恐不屈之意。",
+                    detail: "重雷發嚮，千里傳聲，驚險之象，亦有變動之意。表面昌盛風光，內裏正處多事之秋，動盪不安之象。\n\n" +
+                        "**震：亨。震來虩虩，笑言啞啞。震驚百里，不喪匕鬯。**\n\n" +
+                        "**上六**：震索索，視矍矍，征凶。震不于其躬，于其鄰，无咎。婚媾有言。\n" +
+                        "**六五**：震往來厲，億无喪，有事。\n" +
+                        "**九四**：震遂泥。\n" +
+                        "**六三**：震蘇蘇，震行无眚。\n" +
+                        "**六二**：震來厲，億喪貝，躋于九陵，勿逐，七日得。\n" +
+                        "**初九**：震來虩虩，后笑言啞啞，吉。",
+                    modern: "**上六**：**及時止損** 別等大禍臨頭才後悔。察覺變動應立刻修正，保全大局比親友的抱怨更重要。\n" +
+                        "**六五**：**定力** 動盪中要守住「定力」。核心目標不偏移，外部的風吹草動就無法動搖你的根基。\n" +
+                        "**九四**：**優柔寡斷** 這是震卦中唯一不好的爻。面對巨變若被嚇壞了、優柔寡斷，會陷入困境無法自拔。必須保持剛毅。\n" +
+                        "**六三**：**化焦慮為行動** 惶恐時別坐以待斃。焦慮是變革的信號，立刻採取行動，才能化解潛在的危險。\n" +
+                        "**六二**：**保全本錢** 遇重大災難時，生命與人格第一。別因心疼小損失而冒險，時機轉好後，該有的自會回來。。\n" +
+                        "**初九**：**敬畏與警覺** 突發巨變時，保有敬畏心是好事。這份警覺能讓你提前準備，最終立於不敗之地。"
+                },
+                51: {
+                    desc: "重山關鎖之象，步步為營之意。",
+                    detail: "兩重高山並峙，故宜止不宜進，阻塞之象。\n凡事不宜輕舉妄動，前路受阻，只好待機而行。\n\n" +
+                        "**艮：艮其背，不獲其身，行其庭，不見其人，无咎。**\n\n" +
+                        "**上九**：敦艮，吉。\n" +
+                        "**六五**：艮其輔，言有序，悔亡。\n" +
+                        "**六四**：艮其身，无咎。\n" +
+                        "**九三**：艮其限，列其夤，厲薰心。\n" +
+                        "**六二**：艮其腓，不拯其隨，其心不快。\n" +
+                        "**初六**：艮其趾，无咎，利永貞。",
+                    modern: "**上九**：**止於至善。**這是最高境界的定力。不為外界誘惑所動，安於本分，這種深厚的平靜是最踏實的吉祥。\n" +
+                        "**六五**：**謹言慎行。**說話要看時機與條理。在該安靜時管住嘴，就能掌控局面，避免因失言而招致災禍。\n" +
+                        "**六四**：**自我管理** 具備極強的克制力，讓全身心回歸平靜。能冷靜觀察局勢而不盲目行動，是成大事的特質。\n" +
+                        "**九三**：**順其自然** **切忌強求！**若用極端、僵硬的方式強迫自己停止，反而會傷身並引發焦慮。止要止得自然。\n" +
+                        "**六二**：**身不由己** 內心想停，環境卻逼著你走。這種意志與現實的衝突會讓你感到難受與失控。\n" +
+                        "**初六**：**未雨綢繆** 在事情變複雜前就果斷止步。這需要高度自律，卻能為你省去後續無窮的麻煩。"
+                },
+                52: {
+                    desc: "旭日東昇之象，循序漸進之意。",
+                    detail: "山上種有樹木，逐漸成長，比喻循序漸進。\n逐漸走向光明前途，凡事宜打好根基，可得吉慶。\n\n" +
+                        "**漸：女歸吉，利貞。**\n\n" +
+                        "**上九**：鴻漸于逵，其羽可用為儀，吉。\n" +
+                        "**九五**：鴻漸于陵，婦三歲不孕，終莫之勝，吉。\n" +
+                        "**六四**：鴻漸于木，或得其桷，无咎。\n" +
+                        "**九三**：鴻漸于陸，夫征不復，婦孕不育，凶；利御寇。\n" +
+                        "**六二**：鴻漸于磐，飲食衎衎，吉。\n" +
+                        "**初六**：鴻漸于干，小子厲，有言，无咎。",
+                    modern: "**上九**：**德澤後世** 人格與事業的最高境界。留下的不只是財富，更是足以影響後人的名聲與典範。\n" +
+                        "**九五**：**巔峰守正** 已到達目標高位。雖有短暫停滯或小人阻撓，但只要堅持正道，最終勝利必然屬於你。\n" +
+                        "**六四**：**靈活轉身** 晉升中若遇環境不合，別硬碰硬。調整姿態、尋找穩固的支點，便能平安度過轉折。\n" +
+                        "**九三**：**戒之在貪** 這是全卦的警示。切忌偏離循序漸進。跨越到不屬於你的領域或進展太快，必導致嚴重失衡。\n" +
+                        "**六二**：**穩健小康** 已找到堅實平台。目前資源充足、內部和諧，應好好享受並鞏固現有的成果。\n" +
+                        "**初六**：**先求立足** 起步期根基不穩，別怕旁人議論。像鴻雁尋找落腳點，先求穩住陣腳，再談後續進展。"
+                },
+                53: {
+                    desc: "少女追男之象，錯失端正之意。",
+                    detail: "震長男在上，兌少女被壓下，女必歸從，歸乃嫁也，但少女配長男而非正配。\n處事有違常理正道，先得其益，但隨後禍事百端。\n\n" +
+                        "**歸妹：征凶，无攸利。**\n\n" +
+                        "**上六**：女承筐无實，士刲羊无血，无攸利。\n" +
+                        "**六五**：帝乙歸妹，其君之袂，不如其娣之袂良，月几望，吉。\n" +
+                        "**九四**：歸妹愆期，遲歸有時。\n" +
+                        "**六三**：歸妹以須，反歸以娣。\n" +
+                        "**九二**：眇能視，利幽人之貞。\n" +
+                        "**初九**：歸妹以娣，跛能履，征吉。",
+                    modern: "**上六**：**一場空幻。**最嚴厲的警告。若計畫或關係建立在虛假與衝動之上，最終必是一場空，毫無回報。\n" +
+                        "**六五**：**樸實無華** 高位者的智慧。不屑於表面的浮誇，保持謙遜、不與人爭奇鬥艷，反而更能贏得尊重。\n" +
+                        "**九四**：**寧缺勿濫。**環境或時機不對時，與其匆忙結合，不如耐心等待。晚一點成功，好過錯誤的開始。\n" +
+                        "**六三**：**量力而為** 實力不足卻強求高位，只會自取其辱。認清現實、退而求其次，才能找到容身之所。\n" +
+                        "**九二**：**處變不驚。**當環境不如預期，別幻想能立刻改變局勢。應內斂守節，別被亂象牽著鼻子走。\n" +
+                        "**初九**：**認清定位** 目前處於配角或附屬地位，切莫喧賓奪主。安於本分，在有限空間內仍能有成就。"
+                },
+                54: {
+                    desc: "豐滿盛大之象，居安思危之意。",
+                    detail: "雷電交作，聲勢壯大，又離日動於天際，普照大地，為盛大之象。\n運勢極強，為收獲之時，但不宜貪得無厭，知足常樂。\n\n" +
+                        "**豐：亨。王假之，勿憂，宜日中。**\n\n" +
+                        "**上六**：豐其屋，蔀其家，窺其戶，闃其无人，三歲不見，凶。\n" +
+                        "**六五**：來章，有慶譽，吉。\n" +
+                        "**九四**：豐其蔀，日中見斗，遇其夷主，吉。\n" +
+                        "**九三**：豐其沛，日中見昧，折其右肱，无咎。\n" +
+                        "**六二**：豐其蔀，日中見斗，往得疑疾，有孚發若，吉。\n" +
+                        "**初九**：遇其配主，雖旬无咎，往有尚。",
+                    modern: "**上六**：**戒驕戒躁** 成功後若傲慢、脫離群眾，最終會陷入徹底的孤獨。這就是所謂的「高處不勝寒」。\n" +
+                        "**六五**：**共享榮耀** 不獨攬功勞，將光芒分享給有才華的人。集眾人之力，才能讓盛況長久。\n" +
+                        "**九四**：**志同道合** 在昏暗困局中，遇到能攜手打破僵局的夥伴。這種合作會帶來行動的勇氣與吉兆。\n" +
+                        "**九三**：**隨遇而安** 遇上無法掌控的突發阻礙（如政策或人才流失）時，別強撐。這不是你的錯，保存實力最重要。\n" +
+                        "**六二**：**守住本心** 身處高位若被蒙蔽或小人圍繞，不宜硬碰硬。以誠信守住內心光明，靜待陰雲散去。\n" +
+                        "**初九**：**強強聯手** 尋找能力相當、目標一致的搭檔。平等的合作是開啟豐盛局面的關鍵。"
+                },
+                55: {
+                    desc: "居無定所之象，漂泊尋安之意。",
+                    detail: "火燒山野，火頭偏佈，所到之處，無一倖免，火頭尤如行旅之人，無所定處。\n諸事變動不定，宜堅守信念，多參考他人意見，否則必有凶。\n\n" +
+                        "**旅：小亨，旅貞吉。**\n\n" +
+                        "**上九**：鳥焚其巢，旅人先笑后號啕。喪牛于易，凶。\n" +
+                        "**六五**：射雉一矢亡，終以譽命。\n" +
+                        "**九四**：旅于處，得其資斧，我心不快。\n" +
+                        "**九三**：旅焚其次，喪其童僕，貞厲。\n" +
+                        "**六二**：旅即次，懷其資，得童僕貞。\n" +
+                        "**初六**：旅瑣瑣，斯其所取災。",
+                    modern: "**上九**：**莫忘根本。**得意忘形必招禍。在異鄉稍有成就就傲慢自大（焚巢），會迅速失去立身之本，慘澹收場。\n" +
+                        "**六五**：**展現才華** 主動展現能力（射雉）。雖然需要先投入或犧牲一點代價，但最終能獲得認可，進入核心圈。\n" +
+                        "**九四**：**暫時棲身** 目前雖有固定收入與安穩，但這只是過渡期。心中要有數：這裡並非長久志向，只是寄人籬下。\n" +
+                        "**九三**：**過硬易折** 九三以剛爻居剛位，人在異鄉卻脾氣火爆、處事強硬，這會燒掉你辛苦建立的資源與人脈，讓身邊人離你而去。\n" +
+                        "**六二**：**充實守分** 資源充足且有得力助手，是最佳狀態。只要能放下身段、守好本分，發展會非常順利。\n" +
+                        "**初六**：**忌小家子氣** 在陌生環境中斤斤計較、器量狹小，不僅顯得寒酸，更容易得罪當地人。應大方得體。"
+                },
+                56: {
+                    desc: "隨風漂蕩之象，上行下效之意。",
+                    detail: "此卦為兩巽風重疊，巽為入，風之所到無孔不入，尤如政令之頒舖報，深入民心。\n運勢起落浮沉不定，要隨機應變，心平氣和，擇善固執。\n\n" +
+                        "**巽：小亨。利攸往。利見大人。**\n\n" +
+                        "**上九**：巽在牀下，喪其資斧，貞凶。\n" +
+                        "**九五**：貞吉悔亡，無不利。無初有終，先庚三日，后庚三日，吉。\n" +
+                        "**六四**：悔亡，田獲三品。\n" +
+                        "**九三**：頻巽，吝。\n" +
+                        "**九二**：巽在牀下，用史巫紛若，吉无咎。\n" +
+                        "**初六**：進退，利武人之貞。",
+                    modern: "**上九**：**守住底線。**謙遜不代表沒立場。若為了順從而喪失尊嚴，那是懦弱而非謙遜，必致失敗。\n" +
+                        "**九五**：**反覆宣導** 決策要像風一樣持續滲透。推行新事物時，需反覆溝通與深思，才能圓滿。\n" +
+                        "**六四**：**柔中帶剛** 六四是巽卦中最能將「柔」轉化為「行動」的一爻。既能順應上級，又能有效執行，最終必有多方回報。\n" +
+                        "**九三**：**拒絕作秀** 順應要發自內心。如果只是表面示弱或是因為膽小而反覆低頭，只會被人看輕。\n" +
+                        "**九二**：**放下身段** 為了大局，有時必須放低姿態。只要動機真誠，這種低調反而能化解阻礙。\n" +
+                        "**初六**：**當機立斷** 巽卦代表柔，柔過頭就是沒主見。決策若反覆不定，請借用一點「剛性」來支撐你的行動力。"
+                },
+                57: {
+                    desc: "與眾同樂之象，有譽有譏之意。",
+                    detail: "兌為少女，又為喜悅，兩澤相依，有譽有譏之象。\n有譽有譏，守正道，諸事尚可稱意。\n\n" +
+                        "**兌：亨。利貞。**\n\n" +
+                        "**上六**：引兌。\n" +
+                        "**九五**：孚于剝，有厲。\n" +
+                        "**九四**：商兌，未寧，介疾有喜。\n" +
+                        "**六三**：來兌，凶。\n" +
+                        "**九二**：孚兌，吉，悔亡。\n" +
+                        "**初九**：和兌，吉。",
+                    modern: "**上六**：**慎用引導力** 這一爻沒有好壞的斷語，快樂是雙面刃。要引導大家邁向正向目標，還是沈溺於虛浮享樂？後果自負。\n" +
+                        "**九五**：**遠離諂媚。**最要提防身邊的甜言蜜語。聽好話雖爽，但若重用只會奉承的小人，代價極重。\n" +
+                        "**九四**：**定心抉擇** 面對誘惑與多重選擇會焦慮是正常的。拒絕不正當的提議，真正的成功才會來。\n" +
+                        "**六三**：**拒絕討好** 靠「討好強者」換來的快樂既短暫又危險。卑躬屈膝只會讓你失去尊嚴與立場。\n" +
+                        "**九二**：**真誠待人** 發自內心的真誠最動人。不必花言巧語，只要內在充實，自然能贏得穩固信任。\n" +
+                        "**初九**：**內在平和** 最高的快樂不假外求。內心安穩、與人交往不卑不亢，好運自然隨之而來。"
+                },
+                58: {
+                    desc: "風吹水盪之象，隨波渙散之意。",
+                    detail: "渙散，風吹在水面上，流動四散之象。\n雖有憂患，但終可解困，忌任性散渙。\n\n" +
+                        "**渙：亨。王假有廟，利涉大川，利貞。**\n\n" +
+                        "**上九**：渙其血，去逖出，无咎。\n" +
+                        "**九五**：渙汗其大號，渙王居，无咎。\n" +
+                        "**六四**：渙其群，元吉。渙有丘，匪夷所思。\n" +
+                        "**六三**：渙其躬，无悔。\n" +
+                        "**九二**：渙奔其机，悔亡。\n" +
+                        "**初六**：用拯馬壯，吉。",
+                    modern: "**上九**：**抽身退避。**危險已遠離或局勢已終。成功從衝突中抽身，平安離開就是最好的結果。\n" +
+                        "**九五**：**利益凝聚** 人心渙散時，空話是沒用的。拿出實質利益並信守承諾，大家才會重新追隨你。\n" +
+                        "**六四**：**大局為重** 打破內部的小圈子與派系。將渙散的力量重新整合在大目標下，必有奇蹟。\n" +
+                        "**六三**：**捨私求全** 這是化解危機的高級智慧。局勢崩散時，放下個人私利、全力貢獻大局，便能獲得真正的平安。\n" +
+                        "**九二**：**找回重心** 環境動盪時，別跟著亂。趕快找到能讓你安心的平台或支點，先穩住陣腳。\n" +
+                        "**初六**：**搶救先機** 問題剛露出苗頭時，別猶豫。果斷借助外力來補救，速度決定了成敗。"
+                },
+                59: {
+                    desc: "蓄水成塘之象，勤檢克己之意。",
+                    detail: "坎水在上，澤為池沼在下，喻蓄積及約束水不使流失，但水位過高，則成泛濫。\n凡事以誠待人，以誠信處事則諸事皆吉，心存邪念則凶。\n\n" +
+                        "**節：亨。苦節不可貞。**\n\n" +
+                        "**上六**：苦節，貞凶，悔亡。\n" +
+                        "**九五**：甘節，吉；往有尚。\n" +
+                        "**六四**：安節，亨。\n" +
+                        "**六三**：不節若，則嗟若，无咎。\n" +
+                        "**九二**：不出門庭，凶。\n" +
+                        "**初九**：不出戶庭，无咎。",
+                    modern: "**上六**：**過猶不及** 節制若變成自虐或嚴苛，必會導致崩潰或反彈。這種極端模式無法持久。。\n" +
+                        "**九五**：**以身作則** 領導者應帶頭遵守規範，且心甘情願。這種「甘甜的節制」最能收服人心。\n" +
+                        "**六四**：**從心所欲** 不委屈、不勉強，發自內心認同並遵守規則。與環境和諧共處，自然通達。\n" +
+                        "**六三**：**自律自省。**現在不節制（慾望、言語、情感），以後就要付出代價。別等後悔才反省。\n" +
+                        "**九二**：**莫失良機** 節制不是死板的僵化。初九是不當動而止，九二則是當動而不動。該行動時若還縮手縮腳、過度保守，反而會招致損失。\n" +
+                        "**初九**：**靜觀時變** 時機不對時，閉門不動就是最好的節制。守住界線，才能避開無謂的麻煩。"
+                },
+                60: {
+                    desc: "以誠待人之象，一諾千金之意。",
+                    detail: "中孚為誠信之意，風吹在澤水之上，澤水必相應而起波浪，為共嗚之象。\n凡事以誠待人，以誠信處事則諸事皆吉，心存邪念則凶。\n\n" +
+                        "**中孚：豚魚吉，利涉大川，利貞。**\n\n" +
+                        "**上九**：翰音登于天，貞凶。\n" +
+                        "**九五**：有孚攣如，无咎。\n" +
+                        "**六四**：月几望，馬匹亡，无咎。\n" +
+                        "**六三**：得敵，或鼓或罷，或泣或歌。\n" +
+                        "**九二**：鳴鶴在陰，其子和之，我有好爵，吾與爾靡之。\n" +
+                        "**初九**：虞吉，有他不燕。",
+                    modern: "**上九**：**切忌虛浮** 誠信必須由內而外。光靠漂亮話卻沒真心，最後只會換來羞辱與幻滅。\n" +
+                        "**九五**：**以德服人** 不靠權威壓迫，而是用無私的誠信贏得人心。這種向心力是任何制度都換不來的。\n" +
+                        "**六四**：**斷捨離** 為了追求更高的志向，必須捨棄拖累你的舊關係。目標正大，就不必介意。\n" +
+                        "**六三**：**修煉內心** 沒主見的人，情緒會被外界牽著走。若內心不強大，永遠都會進退失據。\n" +
+                        "**九二**：**同氣相求。**這是《易經》中最優美的爻辭之一。內在充實，不必張揚。只要你夠真誠，志同道合的人自然會被你吸引。\n" +
+                        "**初九**：**保持純粹** 誠信的基石是「定心」。一開始就守住初心、不被外界誘惑，就能奠定最穩固的基石。"
+                },
+                61: {
+                    desc: "貪多務失之象，陽奉陰違之意。",
+                    detail: "山上有雷，雷聲雖大但被山阻隔，雷聲減少，為小過，又陰爻比陽爻多一倍，亦為小過。\n宜行小事不宜行大事，求財謀望不宜急進。\n\n" +
+                        "**小過：亨。利貞。可小事，不可大事。飛鳥遺之音，不宜上宜下，大吉。**\n\n" +
+                        "**上六**：弗遇過之，飛鳥離之，凶，是謂災眚。\n" +
+                        "**六五**：密云不雨，自我西郊，公弋取彼在穴。\n" +
+                        "**九四**：无咎，弗過遇之。往厲必戒，勿用永貞。\n" +
+                        "**九三**：弗過防之，從或戕之，凶。\n" +
+                        "**六二**：過其祖，遇其妣；不及其君，遇其臣；无咎。\n" +
+                        "**初六**：飛鳥以凶。",
+                    modern: "**上六**：**見好就收** 在成功路中不知止、過度擴張，就像飛鳥自投羅網，自尋死路。\n" +
+                        "**六五**：**側面突破** 大局尚無進展（不雨），別死守原地。從細節或側面著手，反而有意外驚喜。\n" +
+                        "**九四**：**靈活應變** 面對壓力或挑戰，不要硬碰硬。保持高度警覺，隨時調整策略。\n" +
+                        "**九三**：**防微杜漸** **這是全卦最危險的爻。**魔鬼藏在細節裡，絕不可掉以輕心，一時的疏忽可能導致嚴重的後果。\n" +
+                        "**六二**：**務實求小** 別執著最高權位或完美。先達成達成次要的目標、與實際做事的人對接，反而更為務實且安全。\n" +
+                        "**初六**：**安分守己。**根基不穩，切莫好高騖遠。就像還沒長齊羽毛的小鳥強行試飛，容易墜落。"
+                },
+                62: {
+                    desc: "陰陽和諧之象，上下相通之意。",
+                    detail: "坎水在離火之上，水性下注，火勢上炎，水火相濟。\n名利相收，成功之象，但防物極必反，初吉後凶。\n\n" +
+                        "**既濟：亨。小利貞。初吉終亂。**\n\n" +
+                        "**上六**：濡其首，厲。\n" +
+                        "**九五**：東鄰殺牛，不如西鄰之禴祭，實受其福。\n" +
+                        "**六四**：繻有衣袽，終日戒。\n" +
+                        "**九三**：高宗伐鬼方，三年克之，小人勿用。\n" +
+                        "**六二**：婦喪其茀，勿逐，七日得。\n" +
+                        "**初九**：曳其輪，濡其尾，无咎。",
+                    modern: "**上六**：**警惕沉溺** 對巔峰過後的警告。若沉溺於過往榮耀或盲目自信，不願抽身最終將如溺水之狐，遭遇滅頂之災。\n" +
+                        "**九五**：**回歸樸實** 成功之後容易陷入鋪張浪費的虛榮中。回歸樸實、回歸內心的真誠，比表面的排場更能保住福氣。\n" +
+                        "**六四**：**居安思危。**這是「既濟」卦的核心。盛世之中必有隱憂。像準備補漏工具一樣，隨時預防可能的危機，才能長久。\n" +
+                        "**九三**：**任人唯賢** 守成比創業更難。必須持續奮鬥並重用人才，若開始安插親信，事業必毀。\n" +
+                        "**六二**：**處變不驚** 暫時的損失（名利或資源）不必急著爭奪。守住本分，屬於你的東西在一個週期（七日）後自會復得。\n" +
+                        "**初九**：**主動煞車** 事情剛完成，最忌諱志得意滿。要學會適時減速、保持警覺，避免因得意忘形而翻車。"
+                },
+                63: {
+                    desc: "陰陽失調之象，上下不通之意。",
+                    detail: "水性下注，火勢向上，水火不交，而未能相濟，尚未到成功的時候。\n運氣欠佳，但必須耐心突破難關，終可成功，有初凶後吉之象。\n\n" +
+                        "**未濟：亨。小狐汔濟，濡其尾，无攸利。**\n\n" +
+                        "**上九**：有孚于飲酒，无咎，濡其首，有孚失是。\n" +
+                        "**六五**：貞吉，无悔，君子之光，有孚，吉。\n" +
+                        "**九四**：貞吉，悔亡，震用伐鬼方，三年有賞于大國。\n" +
+                        "**六三**：未濟，征凶，利涉大川。\n" +
+                        "**九二**：曳其輪，貞吉。\n" +
+                        "**初六**：濡其尾，吝。",
+                    modern: "**上九**：**善始善終。**成功在望，可放鬆但不可放縱；若得意忘形，必在終點翻車。\n" +
+                        "**六五**：**以德服眾** 大局已定，不必強求。展現誠信與魅力，大家自然會追隨你。\n" +
+                        "**九四**：**堅持到底。**打破僵局需要長期意志，別求快，堅持到底必有大榮耀。\n" +
+                        "**六三**：**轉型契機** 處境尷尬，不能硬衝，但這正是你脫胎換骨、進行大膽變革（涉大川）的最佳窗口。\n" +
+                        "**九二**：**以靜制動** 局勢不明時，先按兵不動；克制衝動，才能確保後續順利。\n" +
+                        "**初六**：**戒急用忍** 實力不足、時機未到，急著出頭只會自取其辱、顯得狼狽。"
+                }
+            };
+            return db[id] || {
+                desc: "詳細資料可於 getMockData() 中補充。",
+                detail: "這裡對應 CardOriDetail 的 detail 屬性。",
+                modern: "這裡對應 modernText 屬性。"
+            };
+        }
+    </script>
+</body>
+
+</html>
