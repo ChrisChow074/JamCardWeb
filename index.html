@@ -5,14 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JamCard 易經塔羅 - 網頁展示版</title>
+    <!-- 引入 html2canvas 負責一鍵截圖 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary: #FF6F61;
             --primary-light: #FFDAD6;
-            --bg: #F2F4F8;
-            --surface: #FFFFFF;
+            --bg: #FFFFFF;
+            --surface: #F2F4F8;
             --text-main: #2D3436;
             --text-sub: #888888;
+
+            /* ====== ★ 你可以在這裡自由修改卡牌大小與間距 ★ ====== */
+            --card-width: 180px;
+            /* 預設卡牌寬度 */
+            --gap-size: 32px;
+            /* 卡牌之間的間距 */
+            --pad-size: 32px;
+            /* 截圖區塊的內邊距 */
         }
 
         body {
@@ -28,7 +38,8 @@
             background: var(--surface);
             padding: 20px;
             border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); */
+            box-shadow: none;
             margin-bottom: 24px;
             display: flex;
             gap: 16px;
@@ -71,25 +82,37 @@
 
         /* 牌陣與浮水印總容器 */
         #screenshotContainer {
+            /*
             background: var(--surface);
             border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); */
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
             padding-bottom: 20px;
+            padding-bottom: 20px;
+            /* 讓容器寬度自動貼合內容(1~2張牌時會縮小) */
+            width: fit-content;
+            margin: 0 auto;
         }
 
         /* 牌陣顯示區 */
         .capture-area {
             display: flex;
             flex-wrap: wrap;
-            gap: 32px;
-            padding: 32px;
-            min-height: 360px;
+            gap: var(--gap-size);
+            padding: var(--pad-size);
+            box-sizing: border-box;
+            /* 最大寬度 = 3張卡(3 * 寬) + 2個間距 + 左右內距，超過就會自動折到下一行 */
+            max-width: calc((var(--card-width) * 3) + (var(--gap-size) * 2) + (var(--pad-size) * 2));
+            min-height: auto;
             justify-content: center;
+            margin: 0 auto;
         }
 
         .card-wrapper {
             position: relative;
-            width: 180px;
+            width: var(--card-width);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -258,34 +281,26 @@
             font-size: 15px;
         }
 
-        /* ====== 截圖模式 ====== */
-        body.capture-mode {
-            background: #fff;
-            padding: 0;
+        /* ====== 自動截圖瞬間的樣式切換 ====== */
+        #screenshotContainer.capture-mode {
+            box-shadow: none;
+            border-radius: 0;
+            background: #ffffff;
         }
 
-        body.capture-mode .control-panel {
-            display: none;
-        }
-
-        body.capture-mode .delete-btn {
+        #screenshotContainer.capture-mode .delete-btn {
             display: none !important;
         }
 
-        body.capture-mode #screenshotContainer {
-            box-shadow: none;
-            border-radius: 0;
-        }
-
-        body.capture-mode .watermark {
+        #screenshotContainer.capture-mode .watermark {
             display: block;
         }
 
-        body.capture-mode .no-line {
+        #screenshotContainer.capture-mode .no-line {
             display: none !important;
         }
 
-        body.capture-mode .line-select {
+        #screenshotContainer.capture-mode .line-select {
             appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -296,21 +311,15 @@
             margin: 0 4px;
         }
 
-        .capture-exit-btn {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 2000;
-            background: #2D3436;
-        }
-
-        body.capture-mode .capture-exit-btn {
-            display: block;
-        }
-
         /* 手機響應式設計 */
         @media (max-width: 768px) {
+            :root {
+                --card-width: 140px;
+                /* 手機版卡牌變小 */
+                --gap-size: 16px;
+                --pad-size: 16px;
+            }
+
             body {
                 padding: 12px;
             }
@@ -322,16 +331,6 @@
 
             #cardInput {
                 width: 180px;
-            }
-
-            .capture-area {
-                gap: 16px;
-                padding: 16px;
-                min-height: auto;
-            }
-
-            .card-wrapper {
-                width: 140px;
             }
 
             .card-title {
@@ -350,6 +349,11 @@
         }
 
         @media (max-width: 480px) {
+            :root {
+                --gap-size: 12px;
+                --pad-size: 12px;
+            }
+
             body {
                 padding: 8px;
             }
@@ -364,14 +368,13 @@
                 width: 100%;
             }
 
-            .capture-area {
-                gap: 12px;
-                padding: 12px;
-            }
-
             .card-wrapper {
                 width: calc(50% - 6px);
-                max-width: 140px;
+                /* 極小螢幕強迫兩排 */
+            }
+
+            .capture-area {
+                max-width: 100%;
             }
 
             .card-title {
@@ -386,13 +389,6 @@
             .line-select {
                 font-size: 12px;
                 padding: 2px;
-            }
-
-            .capture-exit-btn {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                max-width: 140px;
             }
         }
     </style>
@@ -413,7 +409,8 @@
 
         <button onclick="addCard()">加入</button>
         <button onclick="drawRandomCard()">抽牌</button>
-        <button class="btn-secondary" onclick="toggleCaptureMode()">截圖模式</button>
+        <!-- 直接觸發截圖與下載 -->
+        <button class="btn-secondary" onclick="takeScreenshot()">截圖</button>
         <button onclick="clearAll()" style="background-color: #666; margin-left: auto;">清空</button>
     </div>
 
@@ -422,9 +419,6 @@
         <div class="capture-area" id="captureArea"></div>
         <div class="watermark" id="watermark">&copy;jamjamhouse <span id="currentYear"></span></div>
     </div>
-
-    <!-- 退出截圖模式按鈕 -->
-    <button class="capture-exit-btn" onclick="toggleCaptureMode()">退出</button>
 
     <!-- 詳情模態框 -->
     <div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
@@ -494,10 +488,8 @@
         };
 
         document.addEventListener('keydown', function (event) {
-            // 如果按下的是 Esc 鍵 (Escape)
             if (event.key === 'Escape') {
                 const modal = document.getElementById('detailModal');
-                // 檢查如果視窗目前是開啟的狀態，就關閉它
                 if (modal.style.display === 'flex') {
                     closeModal(event, true);
                 }
@@ -626,7 +618,6 @@
             const area = document.getElementById('captureArea');
             area.innerHTML = '';
 
-            // 取得目前的款式設定
             const currentStyle = document.getElementById('styleSelect').value;
 
             drawnCards.forEach((item, index) => {
@@ -646,11 +637,10 @@
                 imgBox.className = 'card-img-box';
                 const img = document.createElement('img');
 
-                // 根據款式與設定的副檔名載入圖片
                 if (currentStyle === 'original') {
-                    img.src = `images/card${item.id + 1}.${ext}`; // card1.webp
+                    img.src = `images/card${item.id + 1}.${ext}`;
                 } else {
-                    img.src = `images/card_${item.id + 1}_style1.${ext}`; // card_1_style1.webp
+                    img.src = `images/card_${item.id + 1}_style1.${ext}`;
                 }
 
                 img.alt = cardNameShort;
@@ -735,8 +725,46 @@
             }
         }
 
-        function toggleCaptureMode() {
-            document.body.classList.toggle('capture-mode');
+        // ================= ★ 全新的一鍵截圖與下載功能 ★ =================
+        async function takeScreenshot() {
+            if (drawnCards.length === 0) {
+                alert("請先加入或抽出牌卡再截圖！");
+                return;
+            }
+
+            const container = document.getElementById('screenshotContainer');
+            // 加上 class 讓刪除鍵消失、浮水印顯示、下拉選單變成無框文字
+            container.classList.add('capture-mode');
+
+            // ★ 加入 100 毫秒的延遲：讓瀏覽器有時間隱藏刪除鍵及改變樣式，避免截圖模組抓錯尺寸
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            try {
+                // 使用 html2canvas 捕捉容器畫面
+                const canvas = await html2canvas(container, {
+                    scale: 2, // 提高解析度確保圖片清晰
+                    backgroundColor: '#FFFFFF', // 設定底色為白色
+                    useCORS: true // 確保可以讀取圖片
+                });
+
+                // 產生下載連結並自動點擊
+                const link = document.createElement('a');
+                link.download = `JamCard_易經塔羅_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+            } catch (error) {
+                console.error("截圖發生錯誤：", error);
+                // ★ 如果在自己電腦(file:///)直接點開測試，會觸發瀏覽器的安全阻擋，這裡給出具體原因
+                if (error.name === "SecurityError" || error.message.includes("Tainted")) {
+                    alert("【瀏覽器安全限制】\n因為您目前是直接在電腦本機打開檔案 (file://) 測試，瀏覽器會阻擋圖片下載。\n\n請將網頁放上 GitHub，在正式的網址環境下，截圖功能就能正常運作了！");
+                } else {
+                    alert("截圖失敗，請重試！");
+                }
+            } finally {
+                // 拍攝完畢後復原樣式
+                container.classList.remove('capture-mode');
+            }
         }
 
         function formatMarkdown(text) {
@@ -948,12 +976,12 @@
                     detail: "**十二消息卦：申月**\n\n" +
                         "天氣上升，地氣下降，天地之氣不交，主閉塞不通。上下不和，百事不通，凡事宜忍，須知否極泰來。\n\n" +
                         "**否：否之匪人，不利君子貞，大往小來。**\n\n" +
-                        "**上九**，傾否，先否後喜。\n" +
-                        "**九五**，休否，大人吉。其亡其亡，繫于苞桑。\n" +
-                        "**九四**，有命，无咎，疇離祉。\n" +
-                        "**六三**，包羞。\n" +
-                        "**六二**，包承，小人吉，大人否。亨。\n" +
-                        "**初六**，拔茅茹以其彙，貞吉。亨。",
+                        "**上九**：傾否，先否後喜。\n" +
+                        "**九五**：休否，大人吉。其亡其亡，繫于苞桑。\n" +
+                        "**九四**：有命，无咎，疇離祉。\n" +
+                        "**六三**：包羞。\n" +
+                        "**六二**：包承，小人吉，大人否。亨。\n" +
+                        "**初六**：拔茅茹以其彙，貞吉。亨。",
                     modern: "**上九**：**物極必反** 黑暗到了盡頭就是黎明。堅持到最後的人，終能看到困局瓦解。\n" +
                         "**九五**：**休否之戒** 出現轉機時更要戒慎恐懼，時刻抱持危機意識，才能真正扭轉局面。\n" +
                         "**九四**：**順時而動** 出現轉機時，若能順應正確的時機行事，原本的阻塞將會開始鬆動。\n" +
@@ -1800,7 +1828,7 @@
                         "**六四**：**斷捨離** 為了追求更高的志向，必須捨棄拖累你的舊關係。目標正大，就不必介意。\n" +
                         "**六三**：**修煉內心** 沒主見的人，情緒會被外界牽著走。若內心不強大，永遠都會進退失據。\n" +
                         "**九二**：**同氣相求。**這是《易經》中最優美的爻辭之一。內在充實，不必張揚。只要你夠真誠，志同道合的人自然會被你吸引。\n" +
-                        "**初九**：**保持純粹** 誠信的基石是「定心」。一開始就守住初心、不被外界誘惑，就能奠定最穩固的基石。"
+                        "**初九**：**保持純粹** 誠信的基石是「定心」。一一開始就守住初心、不被外界誘惑，就能奠定最穩固的基石。"
                 },
                 61: {
                     desc: "貪多務失之象，陽奉陰違之意。",
