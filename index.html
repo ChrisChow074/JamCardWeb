@@ -286,6 +286,24 @@
             box-shadow: none;
             border-radius: 0;
             background: #ffffff;
+
+            /* ★ 這裡就是專屬「截圖時」的尺寸，你可以自由把數字改小 */
+            --card-width: 120px;
+            /* 截圖時卡牌的寬度 (比原本的 180px 細) */
+            --gap-size: 20px;
+            /* 截圖時卡牌的間距 */
+            --pad-size: 20px;
+            /* 截圖時邊緣的空白 */
+        }
+
+        /* 為了配合縮小的卡牌，截圖時的文字也跟著稍微縮小，比例才好看 */
+        #screenshotContainer.capture-mode .card-title {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        #screenshotContainer.capture-mode .line-box {
+            font-size: 13px;
         }
 
         #screenshotContainer.capture-mode .delete-btn {
